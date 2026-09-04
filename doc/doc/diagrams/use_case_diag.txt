@@ -1,0 +1,50 @@
+flowchart LR
+    %% Actors
+    subgraph Actors
+        direction TB
+        Admin["👤 Administrator"]
+        Customer["👤 Customer"]
+    end
+
+    %% System Boundary
+    subgraph CinemaSystem["Ensai Cinéma Club Management System"]
+        direction TB
+        
+        %% Screening & Location Management
+        subgraph AdminFeatures["Administration & Management"]
+            UC1(["Schedule Movie Screenings"])
+            UC3(["View Accounting Reports"])
+            UC3_1(["Filter Reports by Period"])
+            UC3_2(["Computes statistics"])
+            UC5(["Interactive Dashboard"])
+        end
+
+        %% Ticketing & Customer Experience
+        subgraph CustomerFeatures["Ticketing & Engagement"]
+            UC4(["View Movies Playing"])
+            UC2(["Book Movie Screening"])
+            UC2_1(["Select Cinema Room"])
+            UCpayment(["Process Online Payment"])
+            UC_Review(["Submit Rating & Review"])
+            UC6(["Accept or Reject"])
+            UC7(["Fully booked or Vacant seats"])
+        end
+
+        %% Relationships & Dependencies inside system
+        UC4 -.-> UC2
+        UC2 -.->|includes| UC2_1
+        UC2 -.->|includes| UCpayment
+        UC3 -.->|includes| UC3_1
+        UC3 -.->|includes| UC3_2
+        UC3_1 -.-> UC5
+        UC3_2 -.-> UC5
+        UCpayment -.-> UC6
+        UC2_1 -.-> UC7
+    end
+
+    %% Actor Connections
+    Admin --> UC1
+    Admin --> UC3
+
+    Customer --> UC4
+    Customer --> UC_Review
