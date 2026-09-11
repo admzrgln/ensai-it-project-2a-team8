@@ -1,0 +1,159 @@
+---
+config:
+  class:
+    hideEmptyMembersBox: true
+---
+classDiagram
+    direction TB
+
+    namespace Users {
+        class User {
+            +int id
+            +string firstName
+            +string lastName
+            +string email
+            +string password
+            +authenticate()
+        }
+
+        class Administrator {
+            +scheduleScreening(movie, room, dateTime)
+            +generateAccountingReport(period) AccountingReport
+        }
+
+        class Customer {
+            +bookScreening(screening, seatCount)
+            +rateMovie(movie, rating)
+            +orderConcession(items)
+        }
+    }
+
+    namespace CinemaScheduling {
+        class Cinema {
+            +int id
+            +string name
+            +string address
+        }
+
+        class Room {
+            +int id
+            +string name
+            +int capacity
+        }
+
+        class Movie {
+            +int id
+            +string title
+            +int duration
+            +string genre
+            +string externalId
+            +string posterUrl
+        }
+
+        class Screening {
+            +int id
+            +datetime dateTime
+            +float price
+            +int availableSeats
+            +checkAvailability(n)
+        }
+    }
+
+    namespace BookingsAndPayments {
+        class Booking {
+            +int id
+            +datetime bookingDate
+            +string status
+            +int seatCount
+            +confirm()
+            +cancel()
+        }
+
+        class Ticket {
+            +int id
+            +float price
+            +string seat
+        }
+
+        class Payment {
+            +int id
+            +float amount
+            +datetime date
+            +string paymentMethod
+            +string status
+        }
+    }
+
+    namespace Reporting {
+        class AccountingReport {
+            +date periodStart
+            +date periodEnd
+            +float totalAmount
+            +int ticketsSold
+            +float averageTicketPrice
+            +generateFromPayments(payments)
+        }
+
+        class MovieRevenue {
+            +Movie movie
+            +float revenue
+            +int ticketsSold
+        }
+    }
+
+    namespace Reviews {
+        class Review {
+            +int id
+            +int rating
+            +string comment
+            +datetime date
+        }
+    }
+
+    namespace Concessions {
+        class ConcessionOrder {
+            +int id
+            +datetime orderDate
+            +float totalAmount
+            +confirm()
+        }
+
+        class ConcessionOrderLine {
+            +int quantity
+            +float unitPrice
+        }
+
+        class ConcessionItem {
+            +int id
+            +string name
+            +string category
+            +float price
+            +int stockQuantity
+        }
+    }
+
+    User <|-- Administrator
+    User <|-- Customer
+
+    Cinema "1" --> "0..*" Room : contains
+    Administrator "1" --> "0..*" Screening : schedules
+    Movie "1" --> "0..*" Screening : is screened in
+    Room "1" --> "0..*" Screening : hosts
+
+    Customer "1" --> "0..*" Booking : makes
+    Screening "1" --> "0..*" Booking : has
+    Booking "1" --> "1..*" Ticket : generates
+    Booking "1" --> "0..1" Payment : is paid by
+
+    Administrator ..> AccountingReport : generates
+    AccountingReport ..> Payment : calculates from
+    AccountingReport "1" --> "0..*" MovieRevenue : contains
+    MovieRevenue ..> Movie : summarizes revenue for
+
+    Customer "1" --> "0..*" Review : writes
+    Movie "1" --> "0..*" Review : receives
+
+    Customer "1" --> "0..*" ConcessionOrder : places
+    ConcessionOrder "1" --> "1..*" ConcessionOrderLine : contains
+    ConcessionOrderLine "0..*" --> "1" ConcessionItem : refers to
+    ConcessionOrder "0..1" --> "0..1" Payment : is paid by
