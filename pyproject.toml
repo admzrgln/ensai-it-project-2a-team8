@@ -1,4 +1,4 @@
-[project]
+ws[project]
 name = "Projet2A_2026"
 version = "0.1.0"
 description = "Teacher's version of the Projet2A 2024"
@@ -44,7 +44,7 @@ select = ["E", "F", "W", "B", "I", "A", "C90", "PERF", "TCH", "TID"]
 
 [tool.pyrefly]
 project-includes = ["src/**/*"]
-project-excludes = ['**/*venv/**\*']
+project-excludes = ['.venv/**/*']
 search_path = [
     "."
 ]
