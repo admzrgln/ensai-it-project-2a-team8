@@ -1,20 +1,37 @@
-from fastapi import APIRouter, HTTPException, status
+import logging
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
-from src.Model.Movie import Movie
+from backend.src.Service.MovieService import MovieService
 
-movie_router = APIRouter(prefix="/movies", tags=["Movies"])
+# Le nom doit être movie_router pour correspondre à l'import dans API.py
+movie_router = APIRouter(prefix="/movies")
+movie_service = MovieService()
 
 
-@movie_router.get("/{tmdb_id}", status_code=status.HTTP_200_OK)
-def get_movie_by_id(tmdb_id: int):
-    try:
-        # my_movie = movie_service.get_by_id(tmdb_id)
-        my_movie = Movie(original_title="The Wild Robot", id=1)
-        return my_movie
-    except FileNotFoundError:
-        raise HTTPException(
-            status_code=404,
-            detail="Movie with id [{}] not found".format(tmdb_id),
-        ) from FileNotFoundError
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid request") from Exception
+class MovieModel(BaseModel):
+    """Define a Pydantic model for Movies"""
+    id_movie: int | None = None
+    title: str
+    duration: int
+    genre: str
+    external_id: str
+    poster_url: str
+
+@movie_router.get("/", tags=["Movies"])
+async def find_all_movies():
+    """List all movies"""
+    logging.info("List all movies")
+    movies_list = movie_service.find_all()
+    return movies_list
+
+@movie_router.get("/{id_movie}", tags=["Movies"])
+async def movie_by_id(id_movie: int):
+    """Find a movie by id"""
+    logging.info("Find a movie by id")
+    movie = movie_service.find_by_id(id_movie)
+    
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+        
+    return movie
