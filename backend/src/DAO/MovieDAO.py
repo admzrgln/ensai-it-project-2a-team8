@@ -1,5 +1,5 @@
-from backend.src.DAO.DBConnector import DBConnector
 from backend.src.Model.Movie import Movie
+from backend.src.DAO.DBConnector import DBConnector
 from utils.log_utils import get_logger, log
 from utils.singleton import Singleton
 
@@ -10,117 +10,57 @@ class MovieDao(metaclass=Singleton):
     """Class containing methods to access Movies in the database."""
 
     @log
-    def create(self, movie: Movie) -> bool:
-        """
-        Inserts a new movie record.
-        Args:
-            movie (Movie): The movie object to persist.
+    def find_all(self) -> list[Movie]:
+        """List all movies in the database.
         Returns:
-            bool: True if insertion is successful, False otherwise.
+            list[Movie]
         """
-        res = None
-
         try:
-            with DBConnector().connection as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        "INSERT INTO movie (title, duration, genre, external_id, poster_url) "
-                        "VALUES (%(title)s, %(duration)s, %(genre)s, %(external_id)s, %(poster_url)s) "
-                        "RETURNING id;",
-                        {
-                            "title": movie.title,
-                            "duration": movie.duration,
-                            "genre": movie.genre,
-                            "external_id": movie.external_id,
-                            "poster_url": movie.poster_url,
-                        },
-                    )
-                    res = cursor.fetchone()
+            # On utilise directement la méthode sql_query du DBConnector
+            query = "SELECT * FROM public.movie ORDER BY title;"
+            # return_type="all" remplace l'ancien cursor.fetchall()
+            res = DBConnector().sql_query(query, return_type="all")
+            
         except Exception as e:
-            logger.error(f"Error creating movie: {e}")
+            logger.error(e)
             raise
 
-        created = False
-        if res:
-            movie.id = res["id"]
-            created = True
+        movies_list = []
 
-        return created
+        if res:
+            for row in res:
+                movie = Movie(
+                    id_movie=row["id_movie"],
+                    title=row["title"],
+                    duration=row["duration"],
+                    genre=row["genre"],
+                    external_id=row["external_id"],
+                    poster_url=row["poster_url"]
+                )
+                movies_list.append(movie)
+
+        return movies_list
 
     @log
-    def find_by_id(self, id_movie: int) -> Movie | None:
-        """
-        Retrieves a specific movie and converts the database row into a Movie object.
-        Args:
-            id_movie (int): The ID of the movie to find.
-        Returns:
-            Movie: The movie object if found, otherwise None.
-        """
-        res = None
-
+    def find_by_id(self, movie_id: int) -> Movie:
+        """Find a movie by its id."""
         try:
-            with DBConnector().connection as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        " SELECT *                                  "
-                        "   FROM movie                              "
-                        " WHERE id = %(id_movie)                    ",
-                        {"id_movie": id_movie},
-                    )
-                    res = cursor.fetchone()
+            query = "SELECT * FROM public.movie WHERE id_movie = %(id)s;"
+            res = DBConnector().sql_query(query, data={"id": movie_id}, return_type="one")
         except Exception as e:
             logger.error(e)
             raise
 
         movie = None
-
         if res:
             movie = Movie(
-                id=res["id"],
+                id_movie=res["id_movie"],
                 title=res["title"],
                 duration=res["duration"],
                 genre=res["genre"],
                 external_id=res["external_id"],
-                poster_url=res["poster_url"],
+                poster_url=res["poster_url"]
             )
 
         return movie
-
-    @log
-    def find_all(self) -> list[Movie]:
-        """
-        Returns all movies currently in the database.
-        Returns:
-            list[Movie]: A list of Movie objects.
-        """
-        rows = []
-
-        try:
-            with DBConnector().connection as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        """
-                        SELECT *
-                          FROM movie
-                         ORDER BY id ASC;
-                        """
-                    )
-                    rows = cursor.fetchall()
-        except Exception as e:
-            logger.error(f"Error finding all movies: {e}")
-            raise
-
-        movies = []
-        for row in rows:
-            movies.append(
-                Movie(
-                    id=row["id"],
-                    title=row["title"],
-                    duration=row["duration"],
-                    genre=row["genre"],
-                    external_id=row["external_id"],
-                    poster_url=row["poster_url"],
-                )
-            )
-
-        return movies
+        
