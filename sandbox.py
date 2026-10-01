@@ -2,6 +2,8 @@ import os
 from backend.src.Model.Movie import Movie
 from backend.src.DAO.MovieDAO import MovieDao
 from backend.src.Service.MovieService import MovieService
+from backend.src.DAO.UserDAO import UserDao
+
 
 # Si tes variables de connexion sont dans le fichier .env vu sur ta capture,
 # décommente les deux lignes suivantes pour les charger automatiquement :
@@ -110,7 +112,21 @@ def test_movie_service():
         print(f"L'ID généré par PostgreSQL et récupéré par le Service est : {new_movie.id_movie}")
 
 
+# ---------------- USER ---------------------
+
+def run_sandbox_user():
+    dao = UserDao()
+    users = dao.find_all_user()
+    
+    print(f"\nSuccès ! {len(users)} User ont été trouvés dans la base de données :")
+    for user in users:
+        print(user)
+
+    
+
+
+
 
 
 if __name__ == "__main__":
-    test_movie_service()
+    run_sandbox_user()

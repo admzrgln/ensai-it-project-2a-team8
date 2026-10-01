@@ -43,7 +43,7 @@ class MovieDao(metaclass=Singleton):
         return movies_list
 
     @log
-    def find_by_id(self, movie_id: int) -> Movie:
+    def find_by_id(self, movie_id: int) -> Movie | None:
         """Find a movie by its id."""
         try:
             query = "SELECT * FROM public.movie WHERE id_movie = %(id_movie)s;"
@@ -68,7 +68,7 @@ class MovieDao(metaclass=Singleton):
         return movie
 
     @log
-    def find_by_title(self, title: str) -> Movie:
+    def find_by_title(self, title: str) -> Movie | None:
         """Find a movie by its id."""
         try:
             query = """
