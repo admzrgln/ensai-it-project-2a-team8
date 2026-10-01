@@ -3,12 +3,12 @@ class Movie:  # noqa: N999
 
     def __init__(
         self,
-        id_movie: int,
         title: str,
         duration: int,
         genre: str,
-        external_id: int,
+        external_id: str,
         poster_url: str,
+        id_movie: int | None = None,
     ):
         """Constructor"""
         self.id_movie = id_movie

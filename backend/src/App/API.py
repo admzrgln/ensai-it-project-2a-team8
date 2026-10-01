@@ -7,7 +7,7 @@ from .MovieController import movie_router
 
 
 def run_app():
-    app = FastAPI(title="Projet Info 2A", description="Example project for ENSAI students")
+    app = FastAPI(title="Projet Info 2A", description="Example project for ENSAI students", root_path="/proxy/8001")
 
     #app.include_router(user_router)
 
@@ -18,4 +18,4 @@ def run_app():
         """Redirect to the API documentation"""
         return RedirectResponse(url="/docs")
 
-    uvicorn.run(app, port=8000, host="0.0.0.0")
+    uvicorn.run(app, port=8001, host="0.0.0.0")
