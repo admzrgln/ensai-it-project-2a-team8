@@ -1,5 +1,13 @@
-from .Model.User.py import User
+from backend.src.Model.User import User
+from datetime import date
 
 
 class Administrator(User):
-    """ Class administrator
+    """Class representing an administrator, inheriting from User."""
+    
+    def __init__(self, id_user: int | None, first_name: str, last_name: str, 
+                 email: str, password: str, date_of_birth: date | None):
+        
+        # Le rôle est automatiquement forcé à 'admin'
+        super().__init__(id_user, first_name, last_name, email, password, date_of_birth, 
+                        role="admin")
