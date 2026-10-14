@@ -1,8 +1,16 @@
 import os
+from datetime import datetime, timedelta
+from backend.src.Service.ScreeningService import ScreeningService
 from backend.src.Model.Movie import Movie
 from backend.src.DAO.MovieDAO import MovieDao
 from backend.src.Service.MovieService import MovieService
 from backend.src.DAO.UserDAO import UserDao
+from backend.src.DAO.MovieDAO import MovieDao
+from backend.src.DAO.RoomDAO import RoomDao
+from backend.src.DAO.ScreeningDAO import ScreeningDao
+from backend.src.Model.Movie import Movie
+from backend.src.Model.Room import Room
+from backend.src.Model.Screening import Screening
 
 
 # Si tes variables de connexion sont dans le fichier .env vu sur ta capture,
@@ -114,19 +122,64 @@ def test_movie_service():
 
 # ---------------- USER ---------------------
 
-def run_sandbox_user():
-    dao = UserDao()
-    users = dao.find_all_user()
-    
-    print(f"\nSuccès ! {len(users)} User ont été trouvés dans la base de données :")
-    for user in users:
-        print(user)
+def run_test_room():
+    room = Room(room_type="IMAX", number="2", capacity=200)
+    print("Insertion salle :", RoomDao().insert_room(room), "id =", room.id_room)
 
-    
+    print("Toutes les salles :", [str(r) for r in RoomDao().find_all()])
+    print("Salles de type imax :", [str(r) for r in RoomDao().find_by_type("imax")])
+
+    room.capacity = 250
+    print("Modification :", RoomDao().update_room(room))
+
+    print("Suppression :", RoomDao().delete_room(room.id_room))
+    return room
 
 
+def run_insert_room():
+    room = Room(room_type="Imax", number="1", capacity=130)
+    is_created = RoomDao().insert_room(room)
+    print(f"Salle insérée : {is_created}, id = {room.id_room}")
+
+    print("Salles en base :")
+    for r in RoomDao().find_all():
+        print("  ", r)
 
 
+def run_test_screening(id_movie: int, id_room: int, id_admin: int):
+    screening = Screening(
+        id_room=id_room,
+        id_movie=id_movie,
+        id_admin=id_admin,
+        date_time=datetime.now(),
+        base_price=8.50,
+        available_seats=100,
+    )
+    print("Insertion séance :", ScreeningDao().insert_screening(screening),
+          "id =", screening.id_screening)
+
+    print("Toutes les séances :", [str(s) for s in ScreeningDao().find_all()])
+    print("Séances du film :", [str(s) for s in ScreeningDao().find_by_movie(id_movie)])
+
+    # screening.base_price = 10.0
+    # print("Modification :", ScreeningDao().update_screening(screening))
+
+    # print("Suppression :", ScreeningDao().screening_delete(screening.id_screening))
+
+
+def run_test_service(id_movie: int, id_room: int, id_user: int):
+    screening = Screening(
+        id_room=id_room,
+        id_movie=id_movie,
+        id_admin=id_user,  # mets l'id d'un customer pour tester le refus
+        date_time=datetime.now() + timedelta(days=7),  # le service exige une date future
+        base_price=8.50,
+        available_seats=100,
+    )
+    ok = ScreeningService().create_screening(screening)
+    print("Création via le service :", ok, "id =", screening.id_screening)
 
 if __name__ == "__main__":
-    run_sandbox_user()
+    run_test_service(1, 2, 4)
+
+

@@ -1,4 +1,4 @@
-#import logging
+# import logging
 
 from backend.src.DAO.DBConnector import DBConnector
 from backend.src.Model.User import User
@@ -41,7 +41,7 @@ class UserDao(metaclass=Singleton):
                         date_of_birth=row["date_of_birth"]
                     )
                     users_list.append(admin)
-                
+
                 else:
                     customer = Customer(
                         id_user=row["id_user"],
@@ -50,8 +50,40 @@ class UserDao(metaclass=Singleton):
                         email=row["email"],
                         password=row["password"],
                         date_of_birth=row["date_of_birth"],
-                        is_ensai_student=row.get("is_ensai_student", False) # Correction 4
+                        is_ensai_student=row.get("is_ensai_student", False)  
                     )
-                    users_list.append(customer) # Correction 5 : ajout à la liste
+                    users_list.append(customer)  
 
         return users_list
+
+    @log
+    def find_by_id(self, id_user: int) -> User | None:
+        """Find a user by its id."""
+        try:
+            query = "SELECT * FROM public.app_user WHERE id_user = %(id_user)s;"
+            row = DBConnector().sql_query(query, data={"id_user": id_user}, return_type="one")
+        except Exception as e:
+            logger.error(e)
+            raise
+
+        if not row:
+            return None
+
+        if row["role"] == "admin":
+            return Administrator(
+                id_user=row["id_user"],
+                first_name=row["first_name"],
+                last_name=row["last_name"],
+                email=row["email"],
+                password=row["password"],
+                date_of_birth=row["date_of_birth"],
+            )
+        return Customer(
+            id_user=row["id_user"],
+            first_name=row["first_name"],
+            last_name=row["last_name"],
+            email=row["email"],
+            password=row["password"],
+            date_of_birth=row["date_of_birth"],
+            is_ensai_student=row.get("is_ensai_student", False),
+        )
