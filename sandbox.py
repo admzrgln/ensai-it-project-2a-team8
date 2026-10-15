@@ -3,7 +3,10 @@ from backend.src.Model.Movie import Movie
 from backend.src.DAO.MovieDAO import MovieDao
 from backend.src.Service.MovieService import MovieService
 from backend.src.DAO.UserDAO import UserDao
-
+from backend.src.Model.Customer import Customer
+from backend.src.Model.Administrator import Administrator
+from backend.src.Model.User import User
+from datetime import date
 
 # Si tes variables de connexion sont dans le fichier .env vu sur ta capture,
 # décommente les deux lignes suivantes pour les charger automatiquement :
@@ -36,7 +39,7 @@ def run_sandbox():
 
 def run_insert_movie():
     movie = Movie(
-        title="A",
+        title="DZgUFI",
         duration=135,
         genre="Horreur, Crime",
         external_id="1",
@@ -122,11 +125,55 @@ def run_sandbox_user():
     for user in users:
         print(user)
 
+    id_test = 1
+    user = dao.find_user_by_id(id_test)
     
+    if user:
+        print("Succès ! Voici le film trouvé :")
+        print(user) 
+    else:
+        print(f"Échec : Aucun film avec l'id_movie {id_test}.")
 
 
+def run_insert_user():
+    print("--- DÉBUT DU TEST SANDBOX INSERT_USER ---")
+    
+    # 1. Récupération de l'instance unique du DAO
+    user_dao = UserDao()
+
+    # 2. Création d'un objet Customer (sans ID)
+    nouveau_client = Customer(
+        id_user=None,
+        first_name="Malo",
+        last_name="Denid",
+        email="malo.denid@ensai.fr",  # N'oublie pas de changer l'email si tu relances le script (contrainte UNIQUE)
+        password="mot_de_passe_hash",
+        date_of_birth=date(2006, 1, 6),
+        is_ensai_student=True
+    )
+    
+    # 3. Création d'un objet Administrator (sans ID)
+    nouvel_admin = Administrator(
+        id_user=None,
+        first_name="Ilan",
+        last_name="Guedj",
+        email="ilan.guedj@ensai.fr", 
+        password="hash_mdp",
+        date_of_birth=date(2005, 4, 11)
+    )
+
+    # 4. Insertion dans la base de données
+    print("\nTentative d'insertion du client...")
+    client_insere = user_dao.insert_user(nouveau_client)
+    if client_insere:
+        print(f"✅ Succès ! Client inséré avec l'ID : {client_insere.id_user} et le rôle : {client_insere.role}")
+    
+    print("\nTentative d'insertion de l'administrateur...")
+    admin_insere = user_dao.insert_user(nouvel_admin)
+    if admin_insere:
+        print(f"✅ Succès ! Admin inséré avec l'ID : {admin_insere.id_user} et le rôle : {admin_insere.role}")
 
 
 
 if __name__ == "__main__":
-    run_sandbox_user()
+    run_insert_movie()
