@@ -44,7 +44,7 @@ def run_sandbox():
 
 def run_insert_movie():
     movie = Movie(
-        title="A",
+        title="DZgUFI",
         duration=135,
         genre="Horreur, Crime",
         external_id="1",

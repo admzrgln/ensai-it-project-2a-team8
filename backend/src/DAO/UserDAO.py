@@ -18,7 +18,6 @@ class UserDao(metaclass=Singleton):
     def find_all_user(self) -> list[User]:
         """List all users in the database."""
         try:
-            # Correction 1 & 2 : app_user et last_name
             query = "SELECT * FROM public.app_user ORDER BY last_name;"
             res = DBConnector().sql_query(query, return_type="all")
 
@@ -30,7 +29,6 @@ class UserDao(metaclass=Singleton):
 
         if res:
             for row in res:
-                # Correction 3 : row["role"]
                 if row["role"] == "admin":
                     admin = Administrator(
                         id_user=row["id_user"],
