@@ -1,12 +1,17 @@
 import os
+from datetime import datetime, timedelta
+from backend.src.Service.ScreeningService import ScreeningService
 from backend.src.Model.Movie import Movie
 from backend.src.DAO.MovieDAO import MovieDao
 from backend.src.Service.MovieService import MovieService
 from backend.src.DAO.UserDAO import UserDao
-from backend.src.Model.Customer import Customer
-from backend.src.Model.Administrator import Administrator
-from backend.src.Model.User import User
-from datetime import date
+from backend.src.DAO.MovieDAO import MovieDao
+from backend.src.DAO.RoomDAO import RoomDao
+from backend.src.DAO.ScreeningDAO import ScreeningDao
+from backend.src.Model.Movie import Movie
+from backend.src.Model.Room import Room
+from backend.src.Model.Screening import Screening
+
 
 # Si tes variables de connexion sont dans le fichier .env vu sur ta capture,
 # décommente les deux lignes suivantes pour les charger automatiquement :
@@ -117,63 +122,64 @@ def test_movie_service():
 
 # ---------------- USER ---------------------
 
-def run_sandbox_user():
-    dao = UserDao()
-    users = dao.find_all_user()
-    
-    print(f"\nSuccès ! {len(users)} User ont été trouvés dans la base de données :")
-    for user in users:
-        print(user)
+def run_test_room():
+    room = Room(room_type="IMAX", number="2", capacity=200)
+    print("Insertion salle :", RoomDao().insert_room(room), "id =", room.id_room)
 
-    id_test = 1
-    user = dao.find_user_by_id(id_test)
-    
-    if user:
-        print("Succès ! Voici le film trouvé :")
-        print(user) 
-    else:
-        print(f"Échec : Aucun film avec l'id_movie {id_test}.")
+    print("Toutes les salles :", [str(r) for r in RoomDao().find_all()])
+    print("Salles de type imax :", [str(r) for r in RoomDao().find_by_type("imax")])
+
+    room.capacity = 250
+    print("Modification :", RoomDao().update_room(room))
+
+    print("Suppression :", RoomDao().delete_room(room.id_room))
+    return room
 
 
-def run_insert_user():
-    print("--- DÉBUT DU TEST SANDBOX INSERT_USER ---")
-    
-    # 1. Récupération de l'instance unique du DAO
-    user_dao = UserDao()
+def run_insert_room():
+    room = Room(room_type="Imax", number="1", capacity=130)
+    is_created = RoomDao().insert_room(room)
+    print(f"Salle insérée : {is_created}, id = {room.id_room}")
 
-    # 2. Création d'un objet Customer (sans ID)
-    nouveau_client = Customer(
-        id_user=None,
-        first_name="Malo",
-        last_name="Denid",
-        email="malo.denid@ensai.fr",  # N'oublie pas de changer l'email si tu relances le script (contrainte UNIQUE)
-        password="mot_de_passe_hash",
-        date_of_birth=date(2006, 1, 6),
-        is_ensai_student=True
+    print("Salles en base :")
+    for r in RoomDao().find_all():
+        print("  ", r)
+
+
+def run_test_screening(id_movie: int, id_room: int, id_admin: int):
+    screening = Screening(
+        id_room=id_room,
+        id_movie=id_movie,
+        id_admin=id_admin,
+        date_time=datetime.now(),
+        base_price=8.50,
+        available_seats=100,
     )
-    
-    # 3. Création d'un objet Administrator (sans ID)
-    nouvel_admin = Administrator(
-        id_user=None,
-        first_name="Ilan",
-        last_name="Guedj",
-        email="ilan.guedj@ensai.fr", 
-        password="hash_mdp",
-        date_of_birth=date(2005, 4, 11)
+    print("Insertion séance :", ScreeningDao().insert_screening(screening),
+          "id =", screening.id_screening)
+
+    print("Toutes les séances :", [str(s) for s in ScreeningDao().find_all()])
+    print("Séances du film :", [str(s) for s in ScreeningDao().find_by_movie(id_movie)])
+
+    # screening.base_price = 10.0
+    # print("Modification :", ScreeningDao().update_screening(screening))
+
+    # print("Suppression :", ScreeningDao().screening_delete(screening.id_screening))
+
+
+def run_test_service(id_movie: int, id_room: int, id_user: int):
+    screening = Screening(
+        id_room=id_room,
+        id_movie=id_movie,
+        id_admin=id_user,  # mets l'id d'un customer pour tester le refus
+        date_time=datetime.now() + timedelta(days=7),  # le service exige une date future
+        base_price=8.50,
+        available_seats=100,
     )
-
-    # 4. Insertion dans la base de données
-    print("\nTentative d'insertion du client...")
-    client_insere = user_dao.insert_user(nouveau_client)
-    if client_insere:
-        print(f"✅ Succès ! Client inséré avec l'ID : {client_insere.id_user} et le rôle : {client_insere.role}")
-    
-    print("\nTentative d'insertion de l'administrateur...")
-    admin_insere = user_dao.insert_user(nouvel_admin)
-    if admin_insere:
-        print(f"✅ Succès ! Admin inséré avec l'ID : {admin_insere.id_user} et le rôle : {admin_insere.role}")
-
-
+    ok = ScreeningService().create_screening(screening)
+    print("Création via le service :", ok, "id =", screening.id_screening)
 
 if __name__ == "__main__":
-    run_insert_movie()
+    run_test_service(1, 2, 4)
+
+
