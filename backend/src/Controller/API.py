@@ -16,7 +16,6 @@ def run_app():
 
 # app.include_router(user_router)
     app.include_router(movie_router)
-    app.include_router(movie_router)
     app.include_router(room_router)
     app.include_router(screening_router)
 
