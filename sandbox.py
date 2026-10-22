@@ -180,6 +180,6 @@ def run_test_service(id_movie: int, id_room: int, id_user: int):
     print("Création via le service :", ok, "id =", screening.id_screening)
 
 if __name__ == "__main__":
-    run_test_service(1, 2, 4)
+    run_sandbox()
 
 
