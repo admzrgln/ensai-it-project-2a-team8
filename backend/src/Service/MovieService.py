@@ -12,6 +12,12 @@ def _parse_runtime(runtime: str) -> int:
         return 0
 
 
+def _first_genre(genres: str) -> str | None:
+    """'Action, Sci-Fi' -> 'Action' ; 'N/A' ou vide -> None"""
+    first = genres.split(",")[0].strip() if genres else ""
+    return None if first in ("", "N/A") else first
+
+
 class MovieService:
     """Class containing Movie service methods (Business Logic Layer)"""
 
@@ -80,7 +86,7 @@ class MovieService:
         movie = Movie(
             title=data["Title"],
             duration=_parse_runtime(data.get("Runtime", "")),
-            genre=data.get("Genre", ""),
+            genre=_first_genre(data.get("Genre", "")),
             external_id=data["imdbID"],
             poster_url="" if poster == "N/A" else poster,
         )
