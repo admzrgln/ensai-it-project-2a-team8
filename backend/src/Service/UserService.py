@@ -16,3 +16,5 @@ class UserService:
 
     def get_user(self, user_id: int) -> User | None:
         return self.user_repo.get_by_id(user_id)
+
+

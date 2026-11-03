@@ -55,6 +55,7 @@ test = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "freezegun>=1.5.5",
+    "httpx2>=2.16.0",
 ]
 lint = [
     "ruff>=0.16.6",
