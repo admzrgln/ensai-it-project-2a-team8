@@ -6,10 +6,10 @@ class Administrator(User):
     """Class representing an administrator, inheriting from User."""
     
     def __init__(self, id_user: int | None, first_name: str, last_name: str, 
-                 email: str, password: str, date_of_birth: date | None):
+                 email: str, password: str, date_of_birth: date | None, salt: str | None = None):
         
         super().__init__(id_user, first_name, last_name, email, password, date_of_birth, 
-                        role="admin")
+                        role = "admin", salt = salt)
     
     def __str__(self):
         """Définit le comportement de l'objet lorsqu'il est passé à print()"""

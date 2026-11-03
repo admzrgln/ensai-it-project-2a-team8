@@ -3,6 +3,7 @@ from backend.src.Model.User import User
 from backend.src.Model.Customer import Customer
 from backend.src.Model.Administrator import Administrator
 from utils.log_utils import log
+from backend.src.Service.PasswordService import check_password_strength, create_salt, hash_password
 
 
 class UserService:
@@ -34,12 +35,22 @@ class UserService:
         if existing_user is not None:
             return None
 
-        # 2. Règle du rapport d'analyse : vérifier le statut étudiant avec une adresse ensai.fr
+        # 2. Règle du rapport d'analyse : statut étudiant avec une adresse ensai.fr
         if isinstance(user, Customer) and user.email.lower().endswith("@ensai.fr"):
             user.is_ensai_student = True
 
-        return self.user_dao.insert_user(user)
+        # 3. Vérifier la solidité du mot de passe
+        try:
+            check_password_strength(user.password)
+        except Exception:
+            return None
 
+        # 4. Générer un sel et hacher le mot de passe avant l'insertion
+        user.salt = create_salt()
+        user.password = hash_password(user.password, user.salt)
+
+        return self.user_dao.insert_user(user)
+    
     @log
     def update_user(self, id_user: int, user: User) -> User | None:
         """Validate and update an existing user"""

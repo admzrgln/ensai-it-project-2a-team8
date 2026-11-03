@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from backend.src.Service.UserService import UserService
 from backend.src.Model.Customer import Customer
 from backend.src.Model.Administrator import Administrator
+from backend.src.Controller.JWTBearer import jwt_service
 
 user_router = APIRouter(prefix="/users")
 user_service = UserService()
@@ -92,12 +93,12 @@ async def create_user(user_data: UserModel):
 
 @user_router.post("/login", tags=["Users"])
 async def login(credentials: LoginModel):
-    """Authenticate a user"""
+    """Authenticate a user and return a JWT"""
     logging.info(f"Login attempt for: {credentials.email}")
     user = user_service.authenticate(credentials.email, credentials.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    return {"message": "Authentication successful", "user": user}
+    return jwt_service.encode_jwt(user.id_user, user.role)
 
 
 @user_router.put("/{id_user}", tags=["Users"])
