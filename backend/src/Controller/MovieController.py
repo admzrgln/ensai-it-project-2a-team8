@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-
+from backend.src.Service.OmdbClient import OmdbError
 from backend.src.Service.MovieService import MovieService
 from backend.src.Model.Movie import Movie  # Import indispensable pour instancier l'objet métier
 
@@ -18,12 +18,14 @@ class MovieModel(BaseModel):
     external_id: str
     poster_url: str
 
+
 @movie_router.get("/", tags=["Movies"])
 async def find_all_movies():
     """List all movies"""
     logging.info("List all movies")
     movies_list = movie_service.find_all()
     return movies_list
+
 
 @movie_router.get("/search/{title}", tags=["Movies"])
 async def movie_by_title(title: str):
@@ -33,6 +35,7 @@ async def movie_by_title(title: str):
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
     return movie
+
 
 @movie_router.get("/{id_movie}", tags=["Movies"])
 async def movie_by_id(id_movie: int):
@@ -44,6 +47,7 @@ async def movie_by_id(id_movie: int):
         raise HTTPException(status_code=404, detail="Movie not found")
         
     return movie
+
 
 @movie_router.post("/", tags=["Movies"], status_code=201)
 async def create_movie(movie_data: MovieModel):
@@ -67,6 +71,7 @@ async def create_movie(movie_data: MovieModel):
     # On renvoie le film avec son nouvel ID généré
     return new_movie
 
+
 @movie_router.put("/{id_movie}", tags=["Movies"])
 async def update_movie(id_movie: int, movie_data: MovieModel):
     """Update an existing movie"""
@@ -88,6 +93,7 @@ async def update_movie(id_movie: int, movie_data: MovieModel):
         
     return {"message": "Movie updated successfully", "movie": updated_movie}
 
+
 @movie_router.delete("/{id_movie}", tags=["Movies"])
 async def delete_movie(id_movie: int):
     """Delete a movie by id"""
@@ -98,3 +104,25 @@ async def delete_movie(id_movie: int):
         raise HTTPException(status_code=404, detail="Movie not found")
         
     return {"message": f"Movie {id_movie} deleted successfully"}
+
+
+@movie_router.get("/omdb/search/{title}", tags=["Movies"])
+async def search_omdb(title: str):
+    """Search movies on OMDb (does not save anything)"""
+    try:
+        return movie_service.search_omdb(title)
+    except OmdbError as error:
+        raise HTTPException(status_code=502, detail="OMDb service error") from error
+
+
+@movie_router.post("/omdb/import/{imdb_id}", tags=["Movies"], status_code=201)
+async def import_from_omdb(imdb_id: str):
+    """Import a movie from OMDb into the database"""
+    try:
+        return movie_service.import_from_omdb(imdb_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail="Movie not found on OMDb") from error
+    except OmdbError as error:
+        raise HTTPException(status_code=502, detail="OMDb service error") from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=400, detail="Import failed") from error

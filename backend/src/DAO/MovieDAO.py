@@ -78,8 +78,8 @@ class MovieDao(metaclass=Singleton):
             """
             res = DBConnector().sql_query(
                 query, data={"title": title}, return_type="one"
-            ) 
-           
+            )
+
         except Exception as e:
             logger.error(e)
             raise
@@ -186,7 +186,7 @@ class MovieDao(metaclass=Singleton):
             logging.error(f"Erreur lors de l'insertion du film : {e}")  # noqa: LOG015
 
         return False
- 
+
     # partie DELETE
     def movie_delete(self, id_movie: int) -> bool:
         """Update a movie in the database
@@ -201,7 +201,7 @@ class MovieDao(metaclass=Singleton):
             True delete is successful
             False otherwise
         """
-    
+
         try:
             query = """
             DELETE FROM movie WHERE id_movie = %(id_movie)s
@@ -218,3 +218,26 @@ class MovieDao(metaclass=Singleton):
             logger.error(e)
 
         return False
+
+    @log
+    def find_by_external_id(self, external_id: str) -> Movie | None:
+        """Find a movie by its external (IMDb) id."""
+        try:
+            query = "SELECT * FROM public.movie WHERE external_id = %(external_id)s;"
+            res = DBConnector().sql_query(
+                query, data={"external_id": external_id}, return_type="one"
+            )
+        except Exception as e:
+            logger.error(e)
+            raise
+
+        if not res:
+            return None
+        return Movie(
+            id_movie=res["id_movie"],
+            title=res["title"],
+            duration=res["duration"],
+            genre=res["genre"],
+            external_id=res["external_id"],
+            poster_url=res["poster_url"],
+        )
