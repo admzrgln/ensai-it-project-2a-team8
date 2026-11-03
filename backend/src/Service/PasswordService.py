@@ -9,7 +9,7 @@ def hash_password(password: str, salt: str | None = None) -> str:
 
 
 def create_salt() -> str:
-    return secrets.token_hex(128)  
+    return secrets.token_hex(128)
 
 
 def check_password_strength(password: str):

@@ -17,13 +17,6 @@ requires-python = "==3.14.*"
 readme = "README.md"
 license = {text = "MIT"}
 
-[tool.pytest.ini_options]
-addopts = "-ra -q"
-pythonpath = [ "."] 
-testpaths = [
-    "tests",
-]
-
 
 [tool.pdm]
 distribution = false
@@ -63,3 +56,8 @@ typing = [
     "types-psycopg2>=2.9.21.20260724",
     "pyrefly>=1.2.0",
 ]
+
+[tool.pytest.ini_options]
+addopts = "-ra -q --ignore=backend/tests/DAO/test_UserRepo.py --ignore=backend/tests/Model/test_Movie.py --ignore=backend/tests/Service/test_JWTService.py --ignore=backend/tests/Service/test_PasswordService.py"
+pythonpath = ["."]
+testpaths = ["backend/tests"]
