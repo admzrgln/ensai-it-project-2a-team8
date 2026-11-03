@@ -1,18 +1,65 @@
-from typing import Optional
-
-from src.DAO.UserRepo import UserRepo
-from src.Model.User import User
-from src.Service.PasswordService import check_password_strength, create_salt, hash_password
+from backend.src.DAO.UserDAO import UserDao  # noqa: N999
+from backend.src.Model.User import User
+from backend.src.Model.Customer import Customer
+from backend.src.Model.Administrator import Administrator
+from utils.log_utils import log
 
 
 class UserService:
-    def __init__(self, user_repo: UserRepo):
-        self.user_repo = user_repo
+    """Class containing User service methods (Business Logic Layer)"""
 
-    def create_user(self, username: str, password: str) -> User:
-        ## TODO
+    def __init__(self):
+        self.user_dao = UserDao()
 
-        return
+    @log
+    def find_all(self) -> list[User]:
+        """List all users available in the database"""
+        return self.user_dao.find_all_user()
 
-    def get_user(self, user_id: int) -> User | None:
-        return self.user_repo.get_by_id(user_id)
+    @log
+    def find_by_id(self, id_user: int) -> User | None:
+        """Find a specific user by its id"""
+        return self.user_dao.find_by_id(id_user)
+
+    @log
+    def find_by_email(self, email: str) -> User | None:
+        """Find a user by their email address"""
+        return self.user_dao.find_user_by_email(email)
+
+    @log
+    def create_user(self, user: User) -> User | None:
+        """Validate and create a new user"""
+        # 1. Vérifier que l'email n'est pas déjà utilisé (contrainte UNIQUE)
+        existing_user = self.user_dao.find_user_by_email(user.email)
+        if existing_user is not None:
+            return None
+
+        # 2. Règle du rapport d'analyse : vérifier le statut étudiant avec une adresse ensai.fr
+        if isinstance(user, Customer) and user.email.lower().endswith("@ensai.fr"):
+            user.is_ensai_student = True
+
+        return self.user_dao.insert_user(user)
+
+    @log
+    def update_user(self, id_user: int, user: User) -> User | None:
+        """Validate and update an existing user"""
+        if id_user is None:
+            return None
+
+        if isinstance(user, Customer) and user.email.lower().endswith("@ensai.fr"):
+            user.is_ensai_student = True
+
+        return self.user_dao.update_user(id_user, user)
+
+    @log
+    def delete_user(self, id_user: int) -> bool:
+        """Validate and delete a user by its id"""
+        return self.user_dao.delete_user(id_user)
+
+    @log
+    def authenticate(self, email: str, password: str) -> User | None:
+        """Authenticate a user with their email and password (from Class Diagram)"""
+        user = self.user_dao.find_user_by_email(email)
+        if user and user.password == password:
+            return user
+        return None

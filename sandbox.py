@@ -183,48 +183,64 @@ def run_test_service(id_movie: int, id_room: int, id_user: int):
 from datetime import date
 from backend.src.Model.Customer import Customer
 from backend.src.Model.Administrator import Administrator
-from backend.src.DAO.UserDAO import UserDAO
+from backend.src.DAO.UserDAO import UserDao
 
-def run_insert_user():
-    print("--- DÉBUT DU TEST SANDBOX INSERT_USER ---")
+
+
+# L'import respecte scrupuleusement la casse de ton fichier "UserDAO.py"
+from backend.src.DAO.UserDAO import UserDao
+
+
+def run_sandbox4():
+    print("Initialisation du UserDao...")
+    dao = UserDao()
+
+    print("Récupération des utilisateurs via find_all_user()...")
+    users = dao.find_all_user()
     
-    # 1. Récupération de l'instance unique du DAO
-    user_dao = UserDAO()
+    if not users:
+        print("\nAucun utilisateur trouvé dans la base de données.")
+        return
 
-    # 2. Création d'un objet Customer (sans ID)
+    print(f"\nSuccès ! {len(users)} utilisateurs ont été trouvés dans la base de données :")
+    for user in users:
+        # On utilise getattr pour récupérer is_ensai_student s'il existe (pour les Customers),
+        # sinon on affiche 'N/A' (pour les Admins)
+        statut_etudiant = getattr(user, 'is_ensai_student', 'N/A')
+        print(f" - [{user.role.upper()}] ID: {user.id_user} | {user.first_name} {user.last_name} | Email: {user.email} | Étudiant: {statut_etudiant}")
+
+
+def test_insert_user():
+    print("Initialisation du UserDao...")
+    dao = UserDao()
     nouveau_client = Customer(
         id_user=None,
-        first_name="Lucas",
-        last_name="Martin",
-        email="lucas.martin@ensai.fr",  # N'oublie pas de changer l'email si tu relances le script (contrainte UNIQUE)
+        first_name="TestPrénom",
+        last_name="TestNom",
+        email="test.inseshfzuehvurt@ensai.fr",
         password="mot_de_passe_hash",
-        date_of_birth=date(2003, 9, 21),
+        date_of_birth=date(2002, 5, 14),
         is_ensai_student=True
     )
-    
-    # 3. Création d'un objet Administrator (sans ID)
-    nouvel_admin = Administrator(
-        id_user=None,
-        first_name="Sophie",
-        last_name="Directrice",
-        email="sophie.admin@cinema.fr", # Idem, doit être unique
-        password="admin_password_secure",
-        date_of_birth=date(1985, 4, 12)
-    )
 
-    # 4. Insertion dans la base de données
-    print("\nTentative d'insertion du client...")
-    client_insere = user_dao.insert_user(nouveau_client)
-    if client_insere:
-        print(f"Succès ! Client inséré avec l'ID : {client_insere.id_user} et le rôle : {client_insere.role}")
+    print(f"\nTentative d'insertion du client : {nouveau_client.email}...")
     
-    print("\nTentative d'insertion de l'administrateur...")
-    admin_insere = user_dao.insert_user(nouvel_admin)
-    if admin_insere:
-        print(f"Succès ! Admin inséré avec l'ID : {admin_insere.id_user} et le rôle : {admin_insere.role}")
+    # 2. Appel de la méthode d'insertion
+    client_insere = dao.insert_user(nouveau_client)
+
+    # 3. Vérification du résultat
+    if client_insere:
+        print("\nSuccès ! L'utilisateur a été inséré dans la base de données :")
+        print(f" - ID généré : {client_insere.id_user}")
+        print(f" - Rôle : {client_insere.role}")
+        print(f" - Prénom/Nom : {client_insere.first_name} {client_insere.last_name}")
+    else:
+        print("\n❌ Échec de l'insertion.")
+
 
 if __name__ == "__main__":
-    run_insert_user()
+    test_insert_user()
+    
 
 
 
