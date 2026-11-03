@@ -179,7 +179,55 @@ def run_test_service(id_movie: int, id_room: int, id_user: int):
     ok = ScreeningService().create_screening(screening)
     print("Création via le service :", ok, "id =", screening.id_screening)
 
+
+from datetime import date
+from backend.src.Model.Customer import Customer
+from backend.src.Model.Administrator import Administrator
+from backend.src.DAO.UserDAO import UserDAO
+
+def run_insert_user():
+    print("--- DÉBUT DU TEST SANDBOX INSERT_USER ---")
+    
+    # 1. Récupération de l'instance unique du DAO
+    user_dao = UserDAO()
+
+    # 2. Création d'un objet Customer (sans ID)
+    nouveau_client = Customer(
+        id_user=None,
+        first_name="Lucas",
+        last_name="Martin",
+        email="lucas.martin@ensai.fr",  # N'oublie pas de changer l'email si tu relances le script (contrainte UNIQUE)
+        password="mot_de_passe_hash",
+        date_of_birth=date(2003, 9, 21),
+        is_ensai_student=True
+    )
+    
+    # 3. Création d'un objet Administrator (sans ID)
+    nouvel_admin = Administrator(
+        id_user=None,
+        first_name="Sophie",
+        last_name="Directrice",
+        email="sophie.admin@cinema.fr", # Idem, doit être unique
+        password="admin_password_secure",
+        date_of_birth=date(1985, 4, 12)
+    )
+
+    # 4. Insertion dans la base de données
+    print("\nTentative d'insertion du client...")
+    client_insere = user_dao.insert_user(nouveau_client)
+    if client_insere:
+        print(f"Succès ! Client inséré avec l'ID : {client_insere.id_user} et le rôle : {client_insere.role}")
+    
+    print("\nTentative d'insertion de l'administrateur...")
+    admin_insere = user_dao.insert_user(nouvel_admin)
+    if admin_insere:
+        print(f"Succès ! Admin inséré avec l'ID : {admin_insere.id_user} et le rôle : {admin_insere.role}")
+
 if __name__ == "__main__":
-    run_sandbox()
+    run_insert_user()
+
+
+
+
 
 
