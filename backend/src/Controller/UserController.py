@@ -88,6 +88,7 @@ async def create_user(user_data: UserCreateModel):
 
     # Inscription publique : on force le rôle client, personne ne peut se créer admin ici
     new_user = Customer(
+        id_user=None,
         first_name=user_data.first_name,
         last_name=user_data.last_name,
         email=user_data.email,
@@ -100,7 +101,29 @@ async def create_user(user_data: UserCreateModel):
     if not created_user:
         raise HTTPException(status_code=400, detail="Email already exists, weak password or creation failed")
 
-    return created_user
+    today = date.today()
+    dob = created_user.date_of_birth
+    age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+    eligible_tariffs = ["Full price (11.5€)"]
+
+    if age <= 13:
+        eligible_tariffs.append("Under 14 (6€)")
+    if age >= 65:
+        eligible_tariffs.append("Over 65 (9.5€)")
+    if created_user.is_ensai_student:
+        eligible_tariffs.append("ENSAI Student (7.8€)")
+
+    message = "Registration successful. "
+    if created_user.is_ensai_student:
+        message += "Your student ID will be checked at the ticket office. "
+
+    message += f"Based on your age ({age} years old) and status, you are eligible for the following tariffs: {', '.join(eligible_tariffs)}."
+
+    return {
+        "user": created_user,
+        "message": message
+    }
 
 
 @user_router.post("/admin", tags=["Users"], status_code=201)
