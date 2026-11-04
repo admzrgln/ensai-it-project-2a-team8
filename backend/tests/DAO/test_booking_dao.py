@@ -267,3 +267,9 @@ def test_revenue_queries_propagate_db_error(dao, sql_query):
         dao.revenue_by_movie(date(2026, 11, 1), date(2026, 11, 30))
     with pytest.raises(Exception, match="db down"):
         dao.revenue_by_tariff(date(2026, 11, 1), date(2026, 11, 30))
+
+
+def test_find_by_customer_propagates_db_error(dao, sql_query):
+    sql_query.side_effect = Exception("db down")
+    with pytest.raises(Exception, match="db down"):
+        dao.find_by_customer(10)

@@ -140,3 +140,14 @@ def test_delete_room_not_found(mock_service):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Room not found"
+
+
+# 11. POST : la création échoue côté service (coverage 100 %)
+@patch("backend.src.Controller.RoomController.room_service")
+def test_create_room_failure(mock_service):
+    mock_service.create_room.return_value = False
+
+    response = client.post(f"{BASE_URL}/", json=room_data)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid data or creation failed"

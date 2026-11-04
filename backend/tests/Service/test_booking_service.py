@@ -129,3 +129,76 @@ def test_cancel_ok(service):
     service.booking_dao.find_by_id.return_value = Booking(id_customer=10, id_screening=1, id_booking=5)
     service.booking_dao.cancel_booking.return_value = True
     assert service.cancel(5, id_customer=10) is True
+
+
+# --- Cas d'erreur supplémentaires (coverage 100 %) ---------------------------------
+def test_unknown_screening_refused(service):
+    service.screening_dao.find_by_id.return_value = None
+    with pytest.raises(BookingError, match="Screening not found"):
+        service.book(10, 999, True, False, [])
+
+
+def test_customer_without_date_of_birth_refused(service):
+    service.user_dao.find_by_id.return_value = make_customer(date_of_birth=None)
+    with pytest.raises(BookingError, match="date of birth is missing"):
+        service.book(10, 1, include_myself=True, customer_is_student=False, guests=[])
+
+
+def test_customer_without_date_of_birth_can_book_for_guests_only(service):
+    service.user_dao.find_by_id.return_value = make_customer(date_of_birth=None)
+    booking = service.book(10, 1, include_myself=False, customer_is_student=False, guests=[guest()])
+    assert booking.seat_count == 1
+
+
+def test_guest_without_date_of_birth_refused(service):
+    with pytest.raises(BookingError, match="Date of birth is required"):
+        service.book(10, 1, False, False, [guest(date_of_birth=None)])
+
+
+def test_more_than_max_tickets_refused(service):
+    guests = [guest() for _ in range(10)]  # + le client = 11 billets
+    with pytest.raises(BookingError, match="limited to 10 tickets"):
+        service.book(10, 1, True, False, guests)
+    service.booking_dao.insert_booking.assert_not_called()
+
+
+def test_find_by_id_delegates_to_dao(service):
+    booking = Booking(id_customer=10, id_screening=1, id_booking=5)
+    service.booking_dao.find_by_id.return_value = booking
+    assert service.find_by_id(5) is booking
+    service.booking_dao.find_by_id.assert_called_once_with(5)
+
+
+def test_find_by_customer_delegates_to_dao(service):
+    bookings = [Booking(id_customer=10, id_screening=1, id_booking=5)]
+    service.booking_dao.find_by_customer.return_value = bookings
+    assert service.find_by_customer(10) == bookings
+    service.booking_dao.find_by_customer.assert_called_once_with(10)
+
+
+def test_cancel_already_cancelled_booking_refused(service):
+    service.booking_dao.find_by_id.return_value = Booking(id_customer=10, id_screening=1, id_booking=5,
+                                                          status="cancelled")
+    with pytest.raises(BookingError, match="already cancelled"):
+        service.cancel(5, id_customer=10)
+    service.booking_dao.cancel_booking.assert_not_called()
+
+
+def test_cancel_started_screening_refused(service):
+    service.booking_dao.find_by_id.return_value = Booking(id_customer=10, id_screening=1, id_booking=5)
+    service.screening_dao.find_by_id.return_value = make_screening(date_time=datetime.now() - timedelta(hours=1))
+    with pytest.raises(BookingError, match="already started"):
+        service.cancel(5, id_customer=10)
+    service.booking_dao.cancel_booking.assert_not_called()
+
+
+def test_list_tariffs_uses_screening_base_price(service):
+    tariffs = service.list_tariffs(1)
+    assert {"code": "full", "label": "Plein tarif", "price": BASE_PRICE} in tariffs
+    assert {"code": "student", "label": "Étudiant·e", "price": 6.0} in tariffs
+
+
+def test_list_tariffs_unknown_screening(service):
+    service.screening_dao.find_by_id.return_value = None
+    with pytest.raises(BookingError, match="Screening not found"):
+        service.list_tariffs(999)
