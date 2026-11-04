@@ -22,11 +22,11 @@ class Ticket:
         self.first_name = first_name
         self.last_name = last_name
         self.date_of_birth = date_of_birth
-        self.is_holder = is_holder  # True = billet du client qui réserve
+        self.is_holder = is_holder
         self.is_ensai_student = is_ensai_student
         self.is_student = is_student
-        self.tariff_code = tariff_code  # rempli par le TariffService
-        self.price = price  # rempli par le TariffService
+        self.tariff_code = tariff_code
+        self.price = price
 
     def __str__(self):
         return (f"Ticket {self.id_ticket} : {self.first_name}"

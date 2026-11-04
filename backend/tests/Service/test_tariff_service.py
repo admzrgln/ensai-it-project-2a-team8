@@ -53,8 +53,10 @@ def test_child_tariff(service):
 
 def test_max_age_is_inclusive(service):
     """13 ans le jour de la séance -> tarif enfant ; 14 ans -> plus le droit."""
-    assert service.price_ticket(make_ticket(date_of_birth=date(2013, 1, 1)), BASE_PRICE, SCREENING_DAY).tariff_code == "child"
-    assert service.price_ticket(make_ticket(date_of_birth=date(2012, 1, 1)), BASE_PRICE, SCREENING_DAY).tariff_code == "full"
+    aged_13 = service.price_ticket(make_ticket(date_of_birth=date(2013, 1, 1)), BASE_PRICE, SCREENING_DAY)
+    aged_14 = service.price_ticket(make_ticket(date_of_birth=date(2012, 1, 1)), BASE_PRICE, SCREENING_DAY)
+    assert aged_13.tariff_code == "child"
+    assert aged_14.tariff_code == "full"
 
 
 def test_student_tariff(service):
@@ -132,3 +134,44 @@ def test_full_tariff_cannot_be_deactivated(service):
 
 def test_deactivate_tariff(service):
     assert service.deactivate_tariff("child") is True
+
+
+# --- Cas supplémentaires (coverage 100 %) ---------------------------------------
+def test_list_tariffs_for_a_screening(service):
+    assert service.list_tariffs(5.0) == [
+        {"code": "child", "label": "Moins de 14 ans", "price": 4.5},
+        {"code": "ensai", "label": "Élève ENSAI", "price": 4.0},
+        {"code": "student", "label": "Étudiant·e", "price": 5.0},  # plafonné au prix de base
+        {"code": "full", "label": "Plein tarif", "price": 5.0},
+    ]
+    service.tariff_dao.find_all.assert_called_once_with(only_active=True)
+
+
+def test_find_all_delegates_to_dao(service):
+    assert service.find_all(only_active=False) == GRID
+    service.tariff_dao.find_all.assert_called_once_with(False)
+
+
+def test_find_by_code_delegates_to_dao(service):
+    service.tariff_dao.find_by_code.return_value = GRID[0]
+    assert service.find_by_code("child") is GRID[0]
+    service.tariff_dao.find_by_code.assert_called_once_with("child")
+
+
+def test_create_tariff_db_failure(service):
+    service.tariff_dao.insert_tariff.return_value = False
+    with pytest.raises(TariffError, match="Creation failed"):
+        service.create_tariff(Tariff("senior", "65 ans et +", 5.0, min_age=65))
+
+
+def test_update_tariff_db_failure(service):
+    service.tariff_dao.find_by_code.return_value = GRID[0]
+    service.tariff_dao.update_tariff.return_value = False
+    with pytest.raises(TariffError, match="Update failed"):
+        service.update_tariff(Tariff("child", "Moins de 14 ans", 3.5, max_age=13))
+
+
+def test_deactivate_unknown_or_inactive_tariff(service):
+    service.tariff_dao.deactivate_tariff.return_value = False
+    with pytest.raises(TariffError, match="not found or already inactive"):
+        service.deactivate_tariff("nope")
