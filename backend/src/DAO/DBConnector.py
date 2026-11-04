@@ -22,6 +22,28 @@ class DBConnector:
             self.password = os.environ["POSTGRES_PASSWORD"]
             self.schema = os.environ["POSTGRES_SCHEMA"]
 
+    def get_connection(self):
+        """Ouvre une connexion pour enchaîner plusieurs requêtes dans UNE transaction.
+
+        Utilisation :
+            conn = DBConnector().get_connection()
+            try:
+                with conn:                    # COMMIT si tout va bien, ROLLBACK sinon
+                    with conn.cursor() as cur:
+                        cur.execute(...)
+            finally:
+                conn.close()
+        """
+        return psycopg2.connect(
+            host=self.host,
+            port=self.port,
+            database=self.database,
+            user=self.user,
+            password=self.password,
+            options=f"-c search_path={self.schema}",
+            cursor_factory=RealDictCursor,
+        )
+
     def sql_query(
         self,
         query: str,

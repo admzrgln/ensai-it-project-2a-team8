@@ -2,6 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
+from .BookingController import booking_router
 from .MovieController import movie_router
 from .RoomController import room_router
 from .ScreeningController import screening_router
@@ -19,6 +20,7 @@ def run_app():
     app.include_router(movie_router)
     app.include_router(room_router)
     app.include_router(screening_router)
+    app.include_router(booking_router)
 
     @app.get("/", include_in_schema=False)
     async def redirect_to_docs():

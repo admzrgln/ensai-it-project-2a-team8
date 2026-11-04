@@ -35,3 +35,10 @@ def require_admin(payload: dict = Depends(get_current_user)) -> dict:
     if payload.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
     return payload
+
+
+def require_customer(payload: dict = Depends(get_current_user)) -> dict:
+    """Refuse l'accès si l'utilisateur n'est pas un customer (ex. réservation)."""
+    if payload.get("role") != "customer":
+        raise HTTPException(status_code=403, detail="Customers only")
+    return payload
