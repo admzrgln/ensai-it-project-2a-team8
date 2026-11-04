@@ -21,9 +21,9 @@ def validate_username_password(username: str, password: str, user_repo) -> User:
     user = user_repo.get_by_username(username)
     if user is None:
         raise Exception(f"user with username {username} not found")
-    
+
     hashed_input_password = hash_password(password, user.salt)
     if hashed_input_password != user.password:
         raise Exception("Incorrect password")
-    
+
     return user

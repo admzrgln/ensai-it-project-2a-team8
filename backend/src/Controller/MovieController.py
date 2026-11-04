@@ -1,6 +1,9 @@
 import logging
-from fastapi import APIRouter, HTTPException
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+from backend.src.Controller.JWTBearer import require_admin
 from backend.src.Service.OmdbClient import OmdbError
 from backend.src.Service.MovieService import MovieService
 from backend.src.Model.Movie import Movie  # Import indispensable pour instancier l'objet métier
@@ -49,7 +52,7 @@ async def movie_by_id(id_movie: int):
     return movie
 
 
-@movie_router.post("/", tags=["Movies"], status_code=201)
+@movie_router.post("/", tags=["Movies"], status_code=201, dependencies=[Depends(require_admin)])
 async def create_movie(movie_data: MovieModel):
     """Create a new movie"""
     logging.info(f"Create a new movie: {movie_data.title}")
@@ -72,7 +75,7 @@ async def create_movie(movie_data: MovieModel):
     return new_movie
 
 
-@movie_router.put("/{id_movie}", tags=["Movies"])
+@movie_router.put("/{id_movie}", tags=["Movies"], dependencies=[Depends(require_admin)])
 async def update_movie(id_movie: int, movie_data: MovieModel):
     """Update an existing movie"""
     logging.info(f"Update movie id: {id_movie}")
@@ -94,7 +97,8 @@ async def update_movie(id_movie: int, movie_data: MovieModel):
     return {"message": "Movie updated successfully", "movie": updated_movie}
 
 
-@movie_router.delete("/{id_movie}", tags=["Movies"])
+
+@movie_router.delete("/{id_movie}", tags=["Movies"], dependencies=[Depends(require_admin)])
 async def delete_movie(id_movie: int):
     """Delete a movie by id"""
     logging.info(f"Delete movie id: {id_movie}")

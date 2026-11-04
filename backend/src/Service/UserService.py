@@ -50,7 +50,7 @@ class UserService:
         user.password = hash_password(user.password, user.salt)
 
         return self.user_dao.insert_user(user)
-    
+
     @log
     def update_user(self, id_user: int, user: User) -> User | None:
         """Validate and update an existing user"""
@@ -59,6 +59,14 @@ class UserService:
 
         if isinstance(user, Customer) and user.email.lower().endswith("@ensai.fr"):
             user.is_ensai_student = True
+
+        try:
+            check_password_strength(user.password)
+        except Exception:
+            return None
+
+        user.salt = create_salt()
+        user.password = hash_password(user.password, user.salt)
 
         return self.user_dao.update_user(id_user, user)
 
@@ -69,8 +77,8 @@ class UserService:
 
     @log
     def authenticate(self, email: str, password: str) -> User | None:
-        """Authenticate a user with their email and password (from Class Diagram)"""
+        """Authenticate a user with their email and password"""
         user = self.user_dao.find_user_by_email(email)
-        if user and user.password == password:
+        if user and user.salt and user.password == hash_password(password, user.salt):
             return user
         return None

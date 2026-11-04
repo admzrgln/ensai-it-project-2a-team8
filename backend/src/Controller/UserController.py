@@ -1,8 +1,9 @@
 import logging
 from datetime import date
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel, Field
 
+from backend.src.Controller.JWTBearer import require_admin, get_current_user
 from backend.src.Service.UserService import UserService
 from backend.src.Model.Customer import Customer
 from backend.src.Model.Administrator import Administrator
@@ -13,15 +14,31 @@ user_service = UserService()
 
 
 class UserModel(BaseModel):
-    """Define a Pydantic model for Users"""
+    """Modèle de mise à mise à jour d'un compte"""
     id_user: int | None = None
     first_name: str
     last_name: str
     email: str
     password: str
-    role: str = "customer"  # "customer" ou "admin"
+    role: str = Field(default="customer", description="Seul un administrateur peut modifier le rôle.")
     date_of_birth: date
-    is_ensai_student: bool = False
+    is_ensai_student: bool = Field(
+        default=False,
+        description="Si is_ensai_student = true, votre carte étudiante sera vérifiée au guichet.",
+    )
+
+
+class UserCreateModel(BaseModel):
+    """Modèle d'inscription : pas de rôle (toujours client pour POST /users/)"""
+    first_name: str
+    last_name: str
+    email: str
+    password: str
+    date_of_birth: date
+    is_ensai_student: bool = Field(
+        default=False,
+        description="Si is_ensai_student = true, votre carte étudiante sera vérifiée au guichet.",
+    )
 
 
 class LoginModel(BaseModel):
@@ -30,7 +47,7 @@ class LoginModel(BaseModel):
     password: str
 
 
-@user_router.get("/", tags=["Users"])
+@user_router.get("/", tags=["Users"], dependencies=[Depends(require_admin)])
 async def find_all_users():
     """List all users"""
     logging.info("List all users")
@@ -38,7 +55,7 @@ async def find_all_users():
     return users_list
 
 
-@user_router.get("/search/{email}", tags=["Users"])
+@user_router.get("/search/{email}", tags=["Users"], dependencies=[Depends(require_admin)])
 async def user_by_email(email: str):
     """Find a user by email"""
     logging.info(f"Find a user by email: {email}")
@@ -48,9 +65,15 @@ async def user_by_email(email: str):
     return user
 
 
+def check_self_or_admin(id_user: int, current: dict):
+    if current["role"] != "admin" and current["user_id"] != id_user:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
 @user_router.get("/{id_user}", tags=["Users"])
-async def user_by_id(id_user: int):
+async def user_by_id(id_user: int, current: dict = Depends(get_current_user)):
     """Find a user by id"""
+    check_self_or_admin(id_user, current)
     logging.info(f"Find a user by id: {id_user}")
     user = user_service.find_by_id(id_user)
     if not user:
@@ -59,36 +82,45 @@ async def user_by_id(id_user: int):
 
 
 @user_router.post("/", tags=["Users"], status_code=201)
-async def create_user(user_data: UserModel):
-    """Create a new user (Customer or Administrator)"""
+async def create_user(user_data: UserCreateModel):
+    """Create a new customer account"""
     logging.info(f"Create a new user: {user_data.email}")
 
-    # Conversion du Pydantic Model vers le Modèle Python selon le rôle
-    if user_data.role.lower() == "admin":
-        new_user = Administrator(
-            id_user=None,
-            first_name=user_data.first_name,
-            last_name=user_data.last_name,
-            email=user_data.email,
-            password=user_data.password,
-            date_of_birth=user_data.date_of_birth
-        )
-    else:
-        new_user = Customer(
-            id_user=None,
-            first_name=user_data.first_name,
-            last_name=user_data.last_name,
-            email=user_data.email,
-            password=user_data.password,
-            date_of_birth=user_data.date_of_birth,
-            is_ensai_student=user_data.is_ensai_student
-        )
+    # Inscription publique : on force le rôle client, personne ne peut se créer admin ici
+    new_user = Customer(
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        email=user_data.email,
+        password=user_data.password,
+        date_of_birth=user_data.date_of_birth,
+        is_ensai_student=user_data.is_ensai_student,
+    )
 
     created_user = user_service.create_user(new_user)
     if not created_user:
-        raise HTTPException(status_code=400, detail="Email already exists or creation failed")
+        raise HTTPException(status_code=400, detail="Email already exists, weak password or creation failed")
 
     return created_user
+
+
+@user_router.post("/admin", tags=["Users"], status_code=201)
+async def create_admin(user_data: UserCreateModel, admin: dict = Depends(require_admin)):
+    """Create a new administrator account (admin only)"""
+    logging.info(f"Admin {admin['user_id']} creates an admin: {user_data.email}")
+
+    new_admin = Administrator(
+        id_user=None,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        email=user_data.email,
+        password=user_data.password,
+        date_of_birth=user_data.date_of_birth,
+    )
+
+    created_admin = user_service.create_user(new_admin)
+    if not created_admin:
+        raise HTTPException(status_code=400, detail="Email already exists, weak password or creation failed")
+    return created_admin
 
 
 @user_router.post("/login", tags=["Users"])
@@ -102,18 +134,22 @@ async def login(credentials: LoginModel):
 
 
 @user_router.put("/{id_user}", tags=["Users"])
-async def update_user(id_user: int, user_data: UserModel):
-    """Update an existing user"""
+async def update_user(id_user: int, user_data: UserModel, current: dict = Depends(get_current_user)):
+    """Update a user (own account, or any account for an admin)"""
     logging.info(f"Update user id: {id_user}")
+    check_self_or_admin(id_user, current)
 
-    if user_data.role.lower() == "admin":
+    # Seul un admin peut attribuer le rôle admin
+    role = user_data.role.lower() if current["role"] == "admin" else "customer"
+
+    if role == "admin":
         user_to_update = Administrator(
             id_user=id_user,
             first_name=user_data.first_name,
             last_name=user_data.last_name,
             email=user_data.email,
             password=user_data.password,
-            date_of_birth=user_data.date_of_birth
+            date_of_birth=user_data.date_of_birth,
         )
     else:
         user_to_update = Customer(
@@ -123,7 +159,7 @@ async def update_user(id_user: int, user_data: UserModel):
             email=user_data.email,
             password=user_data.password,
             date_of_birth=user_data.date_of_birth,
-            is_ensai_student=user_data.is_ensai_student
+            is_ensai_student=user_data.is_ensai_student,
         )
 
     updated_user = user_service.update_user(id_user, user_to_update)
@@ -134,12 +170,12 @@ async def update_user(id_user: int, user_data: UserModel):
 
 
 @user_router.delete("/{id_user}", tags=["Users"])
-async def delete_user(id_user: int):
-    """Delete a user by id"""
+async def delete_user(id_user: int, current: dict = Depends(get_current_user)):
+    """Delete a user (own account, or any account for an admin)"""
     logging.info(f"Delete user id: {id_user}")
+    check_self_or_admin(id_user, current)
 
-    is_deleted = user_service.delete_user(id_user)
-    if not is_deleted:
+    if not user_service.delete_user(id_user):
         raise HTTPException(status_code=404, detail="User not found")
 
     return {"message": f"User {id_user} deleted successfully"}
