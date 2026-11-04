@@ -1,22 +1,22 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.src.Controller.JWTBearer import require_admin
 from backend.src.Model.Screening import Screening
-from backend.src.Service.ScreeningService import ScreeningService
+from backend.src.Service.ScreeningService import ScreeningError, ScreeningNotFoundError, ScreeningService
 
 screening_router = APIRouter(prefix="/screenings")
 screening_service = ScreeningService()
 
 
 class ScreeningModel(BaseModel):
-    """Define a Pydantic model for Screenings (l'admin vient du JWT, pas du corps de la requête)"""
+    """Define a Pydantic model for Screenings"""
     id_screening: int | None = None
     id_room: int
     id_movie: int
+    id_admin: int  # = id_user d'un utilisateur admin (plus tard : pris dans le JWT)
     date_time: datetime
     base_price: float
     available_seats: int
@@ -48,49 +48,51 @@ async def screening_by_id(id_screening: int):
 
 
 @screening_router.post("/", tags=["Screenings"], status_code=201)
-async def create_screening(data: ScreeningModel, admin: dict = Depends(require_admin)):
-    """Create a new screening (admin only)"""
-    logging.info(f"Create a screening for movie {data.id_movie} by admin {admin['user_id']}")
+async def create_screening(data: ScreeningModel):
+    """Create a new screening"""
+    logging.info(f"Create a screening for movie {data.id_movie}")
     new_screening = Screening(
         id_screening=None,
         id_room=data.id_room,
         id_movie=data.id_movie,
-        id_admin=admin["user_id"],
+        id_admin=data.id_admin,
         date_time=data.date_time,
         base_price=data.base_price,
         available_seats=data.available_seats,
     )
-    if not screening_service.create_screening(new_screening):
-        raise HTTPException(status_code=400, detail="Invalid data or creation failed")
+    try:
+        screening_service.create_screening(new_screening)
+    except ScreeningError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     return new_screening
 
 
 @screening_router.put("/{id_screening}", tags=["Screenings"])
-async def update_screening(
-    id_screening: int,
-    data: ScreeningModel,
-    admin: dict = Depends(require_admin),
-):
-    """Update an existing screening (admin only)"""
-    logging.info(f"Update screening id: {id_screening} by admin {admin['user_id']}")
+async def update_screening(id_screening: int, data: ScreeningModel):
+    """Update an existing screening"""
+    logging.info(f"Update screening id: {id_screening}")
     updated = Screening(
         id_screening=id_screening,
         id_room=data.id_room,
         id_movie=data.id_movie,
-        id_admin=admin["user_id"],
+        id_admin=data.id_admin,
         date_time=data.date_time,
         base_price=data.base_price,
         available_seats=data.available_seats,
     )
-    if not screening_service.update_screening(updated):
-        raise HTTPException(status_code=404, detail="Screening not found or update failed")
+    try:
+        screening_service.update_screening(updated)
+    except ScreeningNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except ScreeningError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     return {"message": "Screening updated successfully", "screening": updated}
 
 
 @screening_router.delete("/{id_screening}", tags=["Screenings"])
-async def delete_screening(id_screening: int, admin: dict = Depends(require_admin)):
-    """Delete a screening by id (admin only)"""
-    logging.info(f"Delete screening id: {id_screening} by admin {admin['user_id']}")
+async def delete_screening(id_screening: int):
+    """Delete a screening by id"""
+    logging.info(f"Delete screening id: {id_screening}")
     if not screening_service.delete_screening(id_screening):
         raise HTTPException(status_code=404, detail="Screening not found")
     return {"message": f"Screening {id_screening} deleted successfully"}

@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from backend.src.Model.Screening import Screening
-from backend.src.Service.ScreeningService import ScreeningService
+from backend.src.Service.ScreeningService import ScreeningError, ScreeningNotFoundError, ScreeningService
 
 MOVIE_DURATION = 120  # minutes
 ROOM_CAPACITY = 200
@@ -86,7 +86,8 @@ def test_create_screening_success(service):
 def test_create_screening_dao_failure(service):
     service.screening_dao.insert_screening.return_value = False
 
-    assert service.create_screening(make_screening()) is False
+    with pytest.raises(ScreeningError, match="Creation failed"):
+        service.create_screening(make_screening())
 
 
 @pytest.mark.parametrize(
@@ -103,54 +104,62 @@ def test_create_screening_boundary_values_are_valid(service, overrides):
 
 
 def test_create_refused_negative_price(service):
-    assert service.create_screening(make_screening(base_price=-1)) is False
+    with pytest.raises(ScreeningError, match="price can't be negative"):
+        service.create_screening(make_screening(base_price=-1))
     service.screening_dao.insert_screening.assert_not_called()
 
 
 def test_create_refused_negative_available_seats(service):
-    assert service.create_screening(make_screening(available_seats=-1)) is False
+    with pytest.raises(ScreeningError, match="available seats can't be negative"):
+        service.create_screening(make_screening(available_seats=-1))
     service.screening_dao.insert_screening.assert_not_called()
 
 
 def test_create_refused_date_in_the_past(service):
     past = datetime.now() - timedelta(days=1)
 
-    assert service.create_screening(make_screening(date_time=past)) is False
+    with pytest.raises(ScreeningError, match="must be in the future"):
+        service.create_screening(make_screening(date_time=past))
     service.screening_dao.insert_screening.assert_not_called()
 
 
 def test_create_refused_unknown_room(service):
     service.room_dao.find_by_id.return_value = None
 
-    assert service.create_screening(make_screening()) is False
+    with pytest.raises(ScreeningError, match="Room 1 not found"):
+        service.create_screening(make_screening())
     service.screening_dao.insert_screening.assert_not_called()
 
 
 def test_create_refused_room_too_small(service):
     screening = make_screening(available_seats=ROOM_CAPACITY + 1)
 
-    assert service.create_screening(screening) is False
+    with pytest.raises(ScreeningError, match=f"Room 1 has only {ROOM_CAPACITY} seats"):
+        service.create_screening(screening)
     service.screening_dao.insert_screening.assert_not_called()
 
 
 def test_create_refused_unknown_movie(service):
     service.movie_dao.find_by_id.return_value = None
 
-    assert service.create_screening(make_screening()) is False
+    with pytest.raises(ScreeningError, match="Movie 1 not found"):
+        service.create_screening(make_screening())
     service.screening_dao.insert_screening.assert_not_called()
 
 
 def test_create_refused_movie_without_duration(service):
     service.movie_dao.find_by_id.return_value = MagicMock(duration=0)
 
-    assert service.create_screening(make_screening()) is False
+    with pytest.raises(ScreeningError, match="Movie 1 has no duration"):
+        service.create_screening(make_screening())
     service.screening_dao.insert_screening.assert_not_called()
 
 
 def test_create_refused_unknown_organizer(service):
     service.user_dao.find_by_id.return_value = None
 
-    assert service.create_screening(make_screening()) is False
+    with pytest.raises(ScreeningError, match="User 1 not found"):
+        service.create_screening(make_screening())
     service.screening_dao.insert_screening.assert_not_called()
 
 
@@ -158,14 +167,16 @@ def test_create_refused_organizer_is_not_admin(service):
     """Un customer ne peut pas créer de séance."""
     service.user_dao.find_by_id.return_value = MagicMock(role="customer")
 
-    assert service.create_screening(make_screening()) is False
+    with pytest.raises(ScreeningError, match="User 1 is not an administrator"):
+        service.create_screening(make_screening())
     service.screening_dao.insert_screening.assert_not_called()
 
 
 def test_create_refused_overlapping_screening(service):
     service.screening_dao.find_overlapping.return_value = [make_screening(id_screening=42)]
 
-    assert service.create_screening(make_screening()) is False
+    with pytest.raises(ScreeningError, match=r"Room 1 is already used at this time \(screening 42\)"):
+        service.create_screening(make_screening())
     service.screening_dao.insert_screening.assert_not_called()
 
 
@@ -192,21 +203,24 @@ def test_update_screening_success(service):
 
 
 def test_update_screening_without_id_is_refused(service):
-    assert service.update_screening(make_screening(id_screening=None)) is False
+    with pytest.raises(ScreeningError, match="id_screening is required"):
+        service.update_screening(make_screening(id_screening=None))
     service.screening_dao.update_screening.assert_not_called()
 
 
 def test_update_screening_invalid_data_is_refused(service):
     screening = make_screening(id_screening=3, base_price=-5)
 
-    assert service.update_screening(screening) is False
+    with pytest.raises(ScreeningError, match="price can't be negative"):
+        service.update_screening(screening)
     service.screening_dao.update_screening.assert_not_called()
 
 
 def test_update_screening_not_admin_is_refused(service):
     service.user_dao.find_by_id.return_value = MagicMock(role="customer")
 
-    assert service.update_screening(make_screening(id_screening=3)) is False
+    with pytest.raises(ScreeningError, match="not an administrator"):
+        service.update_screening(make_screening(id_screening=3))
     service.screening_dao.update_screening.assert_not_called()
 
 
@@ -228,7 +242,8 @@ def test_update_excludes_itself_from_overlap_check(service):
 def test_update_refused_when_overlapping_another_screening(service):
     service.screening_dao.find_overlapping.return_value = [make_screening(id_screening=99)]
 
-    assert service.update_screening(make_screening(id_screening=3)) is False
+    with pytest.raises(ScreeningError, match="already used at this time"):
+        service.update_screening(make_screening(id_screening=3))
     service.screening_dao.update_screening.assert_not_called()
 
 
@@ -236,7 +251,8 @@ def test_update_screening_dao_failure(service):
     """Par exemple : séance introuvable côté base."""
     service.screening_dao.update_screening.return_value = False
 
-    assert service.update_screening(make_screening(id_screening=999)) is False
+    with pytest.raises(ScreeningNotFoundError, match="Screening 999 not found"):
+        service.update_screening(make_screening(id_screening=999))
 
 
 def test_delete_screening_success(service):
@@ -250,3 +266,19 @@ def test_delete_screening_not_found(service):
     service.screening_dao.screening_delete.return_value = False
 
     assert service.delete_screening(999) is False
+
+
+def test_overlap_message_lists_all_conflicting_screenings(service):
+    service.screening_dao.find_overlapping.return_value = [
+        make_screening(id_screening=4),
+        make_screening(id_screening=7),
+    ]
+
+    with pytest.raises(ScreeningError, match=r"\(screening 4, 7\)"):
+        service.create_screening(make_screening())
+
+
+def test_past_date_message_shows_server_time(service):
+    """L'heure du serveur peut être en UTC : on l'affiche pour éviter les surprises."""
+    with pytest.raises(ScreeningError, match=r"server time: \d{4}-\d{2}-\d{2} \d{2}:\d{2}"):
+        service.create_screening(make_screening(date_time=datetime.now() - timedelta(minutes=1)))

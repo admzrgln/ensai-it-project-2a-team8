@@ -1,9 +1,11 @@
 
 from unittest.mock import patch
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.src.Controller.ScreeningController import screening_router
+from backend.src.Service.ScreeningService import ScreeningError, ScreeningNotFoundError
 
 app = FastAPI()
 app.include_router(screening_router)
@@ -126,12 +128,12 @@ def test_create_screening_invalid_date(mock_service):
 # 9. PUT : séance inexistante
 @patch("backend.src.Controller.ScreeningController.screening_service")
 def test_update_screening_not_found(mock_service):
-    mock_service.update_screening.return_value = False
+    mock_service.update_screening.side_effect = ScreeningNotFoundError("Screening 999 not found")
 
     response = client.put(f"{BASE_URL}/999", json=screening_data)
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Screening not found or update failed"
+    assert response.json()["detail"] == "Screening 999 not found"
 
 
 # 10. DELETE : séance inexistante
@@ -143,3 +145,25 @@ def test_delete_screening_not_found(mock_service):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Screening not found"
+
+
+# 11. POST : une règle métier n'est pas respectée -> 400 avec le message du service
+@patch("backend.src.Controller.ScreeningController.screening_service")
+def test_create_screening_business_error(mock_service):
+    mock_service.create_screening.side_effect = ScreeningError("User 3 is not an administrator")
+
+    response = client.post(f"{BASE_URL}/", json=screening_data)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "User 3 is not an administrator"
+
+
+# 12. PUT : une règle métier n'est pas respectée -> 400 avec le message du service
+@patch("backend.src.Controller.ScreeningController.screening_service")
+def test_update_screening_business_error(mock_service):
+    mock_service.update_screening.side_effect = ScreeningError("Room 1 has only 50 seats (100 requested)")
+
+    response = client.put(f"{BASE_URL}/1", json=screening_data)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Room 1 has only 50 seats (100 requested)"
