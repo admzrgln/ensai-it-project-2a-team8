@@ -76,9 +76,9 @@ class BookingService:
         if len(tickets) > screening.available_seats:
             raise NotEnoughSeatsError(f"Only {screening.available_seats} seat(s) left for this screening")
 
-        # 4. Tarif de chaque billet (âge calculé le jour de la séance)
+        grid = self.tariff_service.find_all(only_active=True)
         for t in tickets:
-            self.tariff_service.price_ticket(t, screening.base_price, screening.date_time.date())
+            self.tariff_service.price_ticket(t, screening.base_price, screening.date_time.date(), grid)
 
         return Booking(id_customer=id_customer, id_screening=id_screening, tickets=tickets)
 

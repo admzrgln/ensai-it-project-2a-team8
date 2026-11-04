@@ -6,6 +6,7 @@ from .BookingController import booking_router
 from .MovieController import movie_router
 from .RoomController import room_router
 from .ScreeningController import screening_router
+from .TariffController import tariff_router
 from .UserController import user_router
 
 
@@ -21,6 +22,7 @@ def run_app():
     app.include_router(room_router)
     app.include_router(screening_router)
     app.include_router(booking_router)
+    app.include_router(tariff_router)
 
     @app.get("/", include_in_schema=False)
     async def redirect_to_docs():
