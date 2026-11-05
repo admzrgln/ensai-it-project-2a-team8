@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from backend.src.DAO.BookingDAO import BookingDao
 from backend.src.DAO.MovieDAO import MovieDao
 from backend.src.DAO.RoomDAO import RoomDao
 from backend.src.DAO.ScreeningDAO import ScreeningDao
@@ -24,6 +25,7 @@ class ScreeningService:
         self.room_dao = RoomDao()
         self.movie_dao = MovieDao()
         self.user_dao = UserDao()
+        self.booking_dao = BookingDao()
 
     @log
     def find_all(self) -> list[Screening]:
@@ -41,26 +43,24 @@ class ScreeningService:
     # Règles métier : chaque méthode lève une ScreeningError avec un message clair
     # ------------------------------------------------------------------
     @staticmethod
-    def _check_values(screening: Screening) -> None:
-        if screening.base_price < 0:
-            raise ScreeningError("The price can't be negative")
-        if screening.available_seats < 0:
-            raise ScreeningError("The number of available seats can't be negative")
+    def _check_date(screening: Screening) -> None:
         now = datetime.now()
         if screening.date_time <= now:
             raise ScreeningError(
                 f"The screening must be in the future (server time: {now:%Y-%m-%d %H:%M})"
             )
 
-    def _check_room(self, screening: Screening) -> None:
+    def _check_room(self, screening: Screening, booked_seats: int = 0) -> int:
+        """Vérifie la salle et renvoie le nombre de places libres (capacité - places déjà réservées)."""
         room = self.room_dao.find_by_id(screening.id_room)
         if room is None:
             raise ScreeningError(f"Room {screening.id_room} not found")
-        if screening.available_seats > room.capacity:
+        if room.capacity < booked_seats:
             raise ScreeningError(
                 f"Room {screening.id_room} has only {room.capacity} seats "
-                f"({screening.available_seats} requested)"
+                f"but {booked_seats} seats are already booked for this screening"
             )
+        return room.capacity - booked_seats
 
     def _check_movie(self, screening: Screening) -> int:
         """Renvoie la durée du film (utile pour vérifier les chevauchements)."""
@@ -91,17 +91,23 @@ class ScreeningService:
                 f"Room {screening.id_room} is already used at this time (screening {ids})"
             )
 
-    def _validate(self, screening: Screening) -> None:
-        """Règles communes à la création et à la modification, vérifiées dans cet ordre."""
-        self._check_values(screening)
-        self._check_room(screening)
+    def _validate(self, screening: Screening, booked_seats: int = 0) -> None:
+        """Règles communes à la création et à la modification, vérifiées dans cet ordre.
+
+        Remplit aussi screening.available_seats : on ne le demande pas à l'admin.
+        """
+        self._check_date(screening)
+        screening.available_seats = self._check_room(screening, booked_seats)
         duration = self._check_movie(screening)
         self._check_admin(screening)
         self._check_overlap(screening, duration)
 
     @log
     def create_screening(self, screening: Screening) -> bool:
-        """Crée la séance. Lève ScreeningError si une règle n'est pas respectée."""
+        """Crée la séance avec toutes les places de la salle disponibles.
+
+        Lève ScreeningError si une règle n'est pas respectée.
+        """
         self._validate(screening)
         if not self.screening_dao.insert_screening(screening):
             raise ScreeningError("Creation failed (database error)")
@@ -109,11 +115,17 @@ class ScreeningService:
 
     @log
     def update_screening(self, screening: Screening) -> bool:
-        """Modifie la séance.
-        Lève ScreeningNotFoundError si elle n'existe pas, ScreeningError sinon."""
+        """Modifie la séance sans perdre les réservations déjà faites.
+
+        Places libres = capacité de la salle (éventuellement nouvelle) - places déjà réservées.
+        Lève ScreeningNotFoundError si la séance n'existe pas, ScreeningError sinon.
+        """
         if screening.id_screening is None:
             raise ScreeningError("id_screening is required")
-        self._validate(screening)
+        if self.screening_dao.find_by_id(screening.id_screening) is None:
+            raise ScreeningNotFoundError(f"Screening {screening.id_screening} not found")
+        booked_seats = self.booking_dao.count_booked_seats(screening.id_screening)
+        self._validate(screening, booked_seats)
         if not self.screening_dao.update_screening(screening):
             raise ScreeningNotFoundError(f"Screening {screening.id_screening} not found")
         return True

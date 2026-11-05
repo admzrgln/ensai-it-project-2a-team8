@@ -5,8 +5,8 @@ from backend.src.Model.Ticket import Ticket
 from backend.src.Model.Tariff import Tariff
 from utils.log_utils import log
 
-# Code utilisé si aucun tarif actif ne correspond (filet de sécurité)
-FALLBACK_CODE = "full"
+# Plein tarif : sans condition et impossible à désactiver, donc toujours applicable
+FULL_TARIFF_CODE = "full"
 
 
 class TariffError(Exception):
@@ -27,7 +27,7 @@ class TariffService:
     def __init__(self):
         self.tariff_dao = TariffDao()
 
-    def price_ticket(self, ticket: Ticket, base_price: float, screening_date: date,
+    def price_ticket(self, ticket: Ticket, screening_date: date,
                      tariffs: list[Tariff] | None = None) -> Ticket:
         """Fill ticket.tariff_code and ticket.price with the cheapest tariff the person is entitled to.
 
@@ -38,36 +38,29 @@ class TariffService:
             tariffs = self.tariff_dao.find_all(only_active=True)
         age = compute_age(ticket.date_of_birth, screening_date)
 
-        best_code, best_price = FALLBACK_CODE, base_price
-        for tariff in tariffs:
-            if tariff.is_eligible(age, ticket.is_ensai_student, ticket.is_student):
-                price = tariff.price_for(base_price)
-                if price < best_price:
-                    best_code, best_price = tariff.code, price
+        eligible = [t for t in tariffs if t.is_eligible(age, ticket.is_ensai_student, ticket.is_student)]
+        if not eligible:
+            raise TariffError(f"No tariff applies: the '{FULL_TARIFF_CODE}' tariff is missing from the grid")
+        best = min(eligible, key=lambda t: t.price)
 
-        ticket.tariff_code = best_code
-        ticket.price = round(best_price, 2)
+        ticket.tariff_code = best.code
+        ticket.price = round(best.price, 2)
         return ticket
-
-    def list_tariffs(self, base_price: float) -> list[dict]:
-        """Grille affichable au client pour une séance donnée."""
-        return [
-            {"code": t.code, "label": t.label, "price": t.price_for(base_price)}
-            for t in self.tariff_dao.find_all(only_active=True)
-        ]
 
     def _check(self, tariff: Tariff) -> None:
         if not tariff.code or not tariff.label:
             raise TariffError("Code and label are required")
-        if tariff.price is not None and tariff.price < 0:
+        if tariff.price is None or tariff.price < 0:
             raise TariffError("Price must be positive")
         for age in (tariff.min_age, tariff.max_age):
             if age is not None and age < 0:
                 raise TariffError("Ages must be positive")
         if tariff.min_age is not None and tariff.max_age is not None and tariff.min_age > tariff.max_age:
             raise TariffError("min_age must be lower than max_age")
-        if tariff.code == FALLBACK_CODE and not tariff.is_active:
-            raise TariffError(f"The '{FALLBACK_CODE}' tariff can't be deactivated")
+        if tariff.code == FULL_TARIFF_CODE and not tariff.is_active:
+            raise TariffError(f"The '{FULL_TARIFF_CODE}' tariff can't be deactivated")
+        if tariff.code == FULL_TARIFF_CODE and tariff.has_conditions:
+            raise TariffError(f"The '{FULL_TARIFF_CODE}' tariff must apply to everyone (no condition)")
 
     @log
     def find_all(self, only_active: bool = True) -> list[Tariff]:
@@ -98,8 +91,8 @@ class TariffService:
 
     @log
     def deactivate_tariff(self, code: str) -> bool:
-        if code == FALLBACK_CODE:
-            raise TariffError(f"The '{FALLBACK_CODE}' tariff can't be deactivated")
+        if code == FULL_TARIFF_CODE:
+            raise TariffError(f"The '{FULL_TARIFF_CODE}' tariff can't be deactivated")
         if not self.tariff_dao.deactivate_tariff(code):
             raise TariffError("Tariff not found or already inactive")
         return True

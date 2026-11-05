@@ -12,14 +12,16 @@ screening_service = ScreeningService()
 
 
 class ScreeningModel(BaseModel):
-    """Define a Pydantic model for Screenings"""
-    id_screening: int | None = None
+    """Define a Pydantic model for Screenings.
+
+    Pas d'id_screening (généré par la base, ou lu dans l'URL pour une modification),
+    pas de prix (les prix viennent de la grille /tariffs), pas de nombre de places
+    (calculé à partir de la capacité de la salle et des réservations).
+    """
     id_room: int
     id_movie: int
     id_admin: int  # = id_user d'un utilisateur admin (plus tard : pris dans le JWT)
     date_time: datetime
-    base_price: float
-    available_seats: int
 
 
 @screening_router.get("/", tags=["Screenings"])
@@ -57,8 +59,6 @@ async def create_screening(data: ScreeningModel):
         id_movie=data.id_movie,
         id_admin=data.id_admin,
         date_time=data.date_time,
-        base_price=data.base_price,
-        available_seats=data.available_seats,
     )
     try:
         screening_service.create_screening(new_screening)
@@ -77,8 +77,6 @@ async def update_screening(id_screening: int, data: ScreeningModel):
         id_movie=data.id_movie,
         id_admin=data.id_admin,
         date_time=data.date_time,
-        base_price=data.base_price,
-        available_seats=data.available_seats,
     )
     try:
         screening_service.update_screening(updated)

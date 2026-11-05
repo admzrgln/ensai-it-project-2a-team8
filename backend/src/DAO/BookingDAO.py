@@ -70,6 +70,21 @@ class BookingDao(metaclass=Singleton):
             logger.error(e)
             raise
 
+    @log
+    def count_booked_seats(self, id_screening: int) -> int:
+        """Nombre de places réservées (réservations confirmées) pour une séance."""
+        query = """
+            SELECT COALESCE(SUM(seat_count), 0) AS booked
+            FROM public.booking
+            WHERE id_screening = %(id)s AND status = 'confirmed';
+        """
+        try:
+            res = DBConnector().sql_query(query, data={"id": id_screening}, return_type="one")
+        except Exception as e:
+            logger.error(e)
+            raise
+        return int(res["booked"]) if res else 0
+
     # POST
     @log
     def insert_booking(self, booking: Booking) -> bool:

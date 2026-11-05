@@ -14,7 +14,7 @@ class TariffDao(metaclass=Singleton):
         return Tariff(
             code=row["code"],
             label=row["label"],
-            price=float(row["price"]) if row["price"] is not None else None,
+            price=float(row["price"]),  # NUMERIC revient en Decimal
             min_age=row["min_age"],
             max_age=row["max_age"],
             requires_ensai=row["requires_ensai"],
@@ -41,7 +41,7 @@ class TariffDao(metaclass=Singleton):
         query = "SELECT * FROM public.tariff"
         if only_active:
             query += " WHERE is_active"
-        query += " ORDER BY price NULLS LAST, code;"
+        query += " ORDER BY price, code;"
         try:
             res = DBConnector().sql_query(query, return_type="all")
         except Exception as e:

@@ -5,7 +5,7 @@ from backend.src.DAO.ScreeningDAO import ScreeningDao
 from backend.src.DAO.UserDAO import UserDao
 from backend.src.Model.Booking import Booking
 from backend.src.Model.Ticket import Ticket
-from backend.src.Service.TariffService import TariffService
+from backend.src.Service.TariffService import TariffError, TariffService
 from utils.log_utils import log
 
 MAX_TICKETS_PER_BOOKING = 10
@@ -77,8 +77,11 @@ class BookingService:
             raise NotEnoughSeatsError(f"Only {screening.available_seats} seat(s) left for this screening")
 
         grid = self.tariff_service.find_all(only_active=True)
-        for t in tickets:
-            self.tariff_service.price_ticket(t, screening.base_price, screening.date_time.date(), grid)
+        try:
+            for t in tickets:
+                self.tariff_service.price_ticket(t, screening.date_time.date(), grid)
+        except TariffError as e:
+            raise BookingError(str(e)) from e
 
         return Booking(id_customer=id_customer, id_screening=id_screening, tickets=tickets)
 
@@ -118,9 +121,3 @@ class BookingService:
         if screening is not None and screening.date_time <= datetime.now():
             raise BookingError("Cannot cancel a booking for a screening that has already started")
         return self.booking_dao.cancel_booking(id_booking)
-
-    def list_tariffs(self, id_screening: int) -> list[dict]:
-        screening = self.screening_dao.find_by_id(id_screening)
-        if screening is None:
-            raise BookingError("Screening not found")
-        return self.tariff_service.list_tariffs(screening.base_price)
