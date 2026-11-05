@@ -110,7 +110,7 @@ async def delete_movie(id_movie: int):
     return {"message": f"Movie {id_movie} deleted successfully"}
 
 
-@movie_router.get("/omdb/search/{title}", tags=["Movies"])
+@movie_router.get("/omdb/search/{title}", tags=["Movies"], dependencies=[Depends(require_admin)])
 async def search_omdb(title: str):
     """Search movies on OMDb (does not save anything)"""
     try:
@@ -119,7 +119,8 @@ async def search_omdb(title: str):
         raise HTTPException(status_code=502, detail="OMDb service error") from error
 
 
-@movie_router.post("/omdb/import/{imdb_id}", tags=["Movies"], status_code=201)
+@movie_router.post("/omdb/import/{imdb_id}", tags=["Movies"], status_code=201,
+                   dependencies=[Depends(require_admin)])
 async def import_from_omdb(imdb_id: str):
     """Import a movie from OMDb into the database"""
     try:

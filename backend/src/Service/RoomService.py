@@ -19,11 +19,6 @@ class RoomService:
         """Find a room by its id"""
         return self.room_dao.find_by_id(id_room)
 
-    @log
-    def find_by_type(self, room_type: str) -> list[Room]:
-        """Find rooms by type (partial match supported)"""
-        # Même principe que MovieService.find_by_title : jokers % pour une recherche partielle
-        return self.room_dao.find_by_type(f"%{room_type}%")
 
     def _is_valid(self, room: Room) -> bool:
         """Règles métier communes à la création et à la modification."""

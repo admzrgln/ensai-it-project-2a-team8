@@ -40,20 +40,6 @@ class RoomDao(metaclass=Singleton):
             raise
         return self._to_room(res) if res else None
 
-    @log
-    def find_by_type(self, room_type: str) -> list[Room]:
-        """List all rooms of a given type (case-insensitive)."""
-        query = """
-            SELECT * FROM public.room
-            WHERE type ILIKE %(type)s
-            ORDER BY number;
-        """
-        try:
-            res = DBConnector().sql_query(query, data={"type": room_type}, return_type="all")
-        except Exception as e:
-            logger.error(e)
-            raise
-        return [self._to_room(r) for r in (res or [])]
 
     # POST
     @log
