@@ -14,7 +14,6 @@ class RoomDao(metaclass=Singleton):
         """Convertit une ligne SQL en objet Room."""
         return Room(
             id_room=row["id_room"],
-            room_type=row["type"],
             number=row["number"],
             capacity=row["capacity"],
         )
@@ -60,11 +59,11 @@ class RoomDao(metaclass=Singleton):
     def insert_room(self, room: Room) -> bool:
         """ Insert a new room in the database. """
         query = """
-            INSERT INTO public.room (type, number, capacity)
-            VALUES (%(type)s, %(number)s, %(capacity)s)
+            INSERT INTO public.room (number, capacity)
+            VALUES (%(number)s, %(capacity)s)
             RETURNING id_room;
         """
-        data = {"type": room.room_type, "number": room.number, "capacity": room.capacity}
+        data = {"number": room.number, "capacity": room.capacity}
         try:
             res = DBConnector().sql_query(query, data=data, return_type="one")
             if res:
@@ -83,13 +82,12 @@ class RoomDao(metaclass=Singleton):
             return False
         query = """
             UPDATE public.room
-            SET type = %(type)s, number = %(number)s, capacity = %(capacity)s
+            SET number = %(number)s, capacity = %(capacity)s
             WHERE id_room = %(id_room)s
             RETURNING id_room;
         """
         data = {
             "id_room": room.id_room,
-            "type": room.room_type,
             "number": room.number,
             "capacity": room.capacity,
         }

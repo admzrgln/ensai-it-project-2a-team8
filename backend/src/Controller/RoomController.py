@@ -13,7 +13,6 @@ room_service = RoomService()
 class RoomModel(BaseModel):
     """Define a Pydantic model for Rooms"""
     id_room: int | None = None
-    room_type: str
     number: str
     capacity: int
 

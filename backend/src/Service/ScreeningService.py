@@ -39,9 +39,13 @@ class ScreeningService:
     def find_by_movie(self, id_movie: int) -> list[Screening]:
         return self.screening_dao.find_by_movie(id_movie)
 
-    # ------------------------------------------------------------------
-    # Règles métier : chaque méthode lève une ScreeningError avec un message clair
-    # ------------------------------------------------------------------
+    @staticmethod
+    def _normalize_date(screening: Screening) -> None:
+        """Une date avec fuseau ("...Z" ou "+01:00") est convertie en heure du serveur, sans fuseau,
+        comme datetime.now() et comme la colonne TIMESTAMP de la base."""
+        if screening.date_time.tzinfo is not None:
+            screening.date_time = screening.date_time.astimezone().replace(tzinfo=None)
+
     @staticmethod
     def _check_date(screening: Screening) -> None:
         now = datetime.now()
@@ -96,6 +100,7 @@ class ScreeningService:
 
         Remplit aussi screening.available_seats : on ne le demande pas à l'admin.
         """
+        self._normalize_date(screening)
         self._check_date(screening)
         screening.available_seats = self._check_room(screening, booked_seats)
         duration = self._check_movie(screening)
