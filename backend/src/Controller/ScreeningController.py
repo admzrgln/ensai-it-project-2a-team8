@@ -3,23 +3,18 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-
+from backend.src.Service.MovieService import MovieService
 from backend.src.Controller.JWTBearer import require_admin
 from backend.src.Model.Screening import Screening
 from backend.src.Service.ScreeningService import ScreeningError, ScreeningNotFoundError, ScreeningService
 
 screening_router = APIRouter(prefix="/screenings")
 screening_service = ScreeningService()
+movie_service = MovieService()
 
 
 class ScreeningModel(BaseModel):
-    """Define a Pydantic model for Screenings.
-
-    Pas d'id_screening (généré par la base, ou lu dans l'URL pour une modification),
-    pas de prix (les prix viennent de la grille /tariffs), pas de nombre de places
-    (calculé à partir de la capacité de la salle et des réservations),
-    pas d'id_admin (lu dans le JWT : on ne peut pas planifier au nom d'un autre admin).
-    """
+    """Define a Pydantic model for Screenings."""
     id_room: int
     id_movie: int
     date_time: datetime
@@ -27,12 +22,19 @@ class ScreeningModel(BaseModel):
 
 @screening_router.get("/", tags=["Screenings"])
 async def find_all_screenings():
-    """List all screenings (public: customers browse the schedule before booking)"""
+    """List all screenings"""
     logging.info("List all screenings")
-    return screening_service.find_all()
+    screenings_list = screening_service.find_all()
+    enriched_screenings = []
+    for screening in screenings_list:
+        movie = movie_service.find_by_id(screening.id_movie)
+        screening_dict = screening.__dict__.copy()
+        screening_dict["movie_title"] = movie.title if movie else "Film inconnu"
+        enriched_screenings.append(screening_dict)
+
+    return enriched_screenings
 
 
-# Cette route doit être AVANT /{id_screening}, sinon "movie" serait lu comme un id
 @screening_router.get("/movie/{id_movie}", tags=["Screenings"])
 async def screenings_by_movie(id_movie: int):
     """List the screenings of a movie"""
