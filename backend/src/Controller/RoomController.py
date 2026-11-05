@@ -1,8 +1,9 @@
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from backend.src.Controller.JWTBearer import require_admin
 from backend.src.Model.Room import Room
 from backend.src.Service.RoomService import RoomService
 
@@ -24,14 +25,6 @@ async def find_all_rooms():
     return room_service.find_all()
 
 
-# Cette route doit être AVANT /{id_room}, sinon "type" serait interprété comme un id
-@room_router.get("/type/{room_type}", tags=["Rooms"])
-async def rooms_by_type(room_type: str):
-    """Find rooms by type"""
-    logging.info(f"Find rooms by type: {room_type}")
-    return room_service.find_by_type(room_type)
-
-
 @room_router.get("/{id_room}", tags=["Rooms"])
 async def room_by_id(id_room: int):
     """Find a room by id"""
@@ -42,7 +35,7 @@ async def room_by_id(id_room: int):
     return room
 
 
-@room_router.post("/", tags=["Rooms"], status_code=201)
+@room_router.post("/", tags=["Rooms"], status_code=201, dependencies=[Depends(require_admin)])
 async def create_room(room_data: RoomModel):
     """Create a new room"""
     logging.info(f"Create a new room: {room_data.room_type} {room_data.number}")
@@ -57,7 +50,7 @@ async def create_room(room_data: RoomModel):
     return new_room
 
 
-@room_router.put("/{id_room}", tags=["Rooms"])
+@room_router.put("/{id_room}", tags=["Rooms"], dependencies=[Depends(require_admin)])
 async def update_room(id_room: int, room_data: RoomModel):
     """Update an existing room"""
     logging.info(f"Update room id: {id_room}")
@@ -72,7 +65,7 @@ async def update_room(id_room: int, room_data: RoomModel):
     return {"message": "Room updated successfully", "room": updated_room}
 
 
-@room_router.delete("/{id_room}", tags=["Rooms"])
+@room_router.delete("/{id_room}", tags=["Rooms"], dependencies=[Depends(require_admin)])
 async def delete_room(id_room: int):
     """Delete a room by id"""
     logging.info(f"Delete room id: {id_room}")

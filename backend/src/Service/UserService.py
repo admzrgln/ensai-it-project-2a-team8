@@ -52,21 +52,30 @@ class UserService:
         return self.user_dao.insert_user(user)
 
     @log
-    def update_user(self, id_user: int, user: User) -> User | None:
-        """Validate and update an existing user"""
+    def update_user(self, id_user: int, user: User, change_password: bool = True) -> User | None:
+        """Validate and update an existing user.
+
+        change_password=False : user.password est déjà le hash en base (et user.salt son sel),
+        on ne le re-hache pas.
+        """
         if id_user is None:
+            return None
+
+        # L'email ne doit pas appartenir à un AUTRE compte (sinon erreur 500 sur la contrainte UNIQUE)
+        other = self.user_dao.find_user_by_email(user.email)
+        if other is not None and other.id_user != id_user:
             return None
 
         if isinstance(user, Customer) and user.email.lower().endswith("@ensai.fr"):
             user.is_ensai_student = True
 
-        try:
-            check_password_strength(user.password)
-        except Exception:
-            return None
-
-        user.salt = create_salt()
-        user.password = hash_password(user.password, user.salt)
+        if change_password:
+            try:
+                check_password_strength(user.password)
+            except Exception:
+                return None
+            user.salt = create_salt()
+            user.password = hash_password(user.password, user.salt)
 
         return self.user_dao.update_user(id_user, user)
 

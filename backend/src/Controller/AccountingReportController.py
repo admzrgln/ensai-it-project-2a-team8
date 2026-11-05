@@ -1,7 +1,9 @@
 import logging
 from datetime import date
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from backend.src.Controller.JWTBearer import require_admin
+
 from pydantic import BaseModel
 
 from backend.src.Service.AccountingReportService import AccountingReportService
@@ -31,14 +33,11 @@ class AccountingReportModel(BaseModel):
 
 
 @accounting_router.get("/", tags=["Accounting"], response_model=AccountingReportModel)
-async def get_accounting_report(period_start: date, period_end: date, id_admin: int):
-    """Accounting report for a period (dates YYYY-MM-DD, both inclusive).
-
-    id_admin is passed as a parameter for now (later: taken from the JWT).
-    """
-    logging.info(f"Accounting report {period_start} -> {period_end} by admin {id_admin}")
+async def get_accounting_report(period_start: date, period_end: date, admin: dict = Depends(require_admin)):
+    """Accounting report for a period (dates YYYY-MM-DD, both inclusive). Admin only."""
+    logging.info(f"Accounting report {period_start} -> {period_end} by admin {admin['user_id']}")
     try:
-        report = accounting_service.generate_report(period_start, period_end, id_admin)
+        report = accounting_service.generate_report(period_start, period_end, admin["user_id"])
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except LookupError as e:
