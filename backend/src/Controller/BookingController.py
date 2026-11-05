@@ -43,12 +43,6 @@ def _call(fn, *args):
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-@booking_router.get("/tariffs/{id_screening}", tags=["Bookings"])
-async def tariffs_for_screening(id_screening: int):
-    """Show the tariff grid for a screening"""
-    return _call(booking_service.list_tariffs, id_screening)
-
-
 @booking_router.post("/quote", tags=["Bookings"])
 async def quote_booking(data: BookingRequestModel, user: dict = Depends(require_customer)):
     """Show the price of each ticket and the total to pay, WITHOUT booking"""

@@ -15,7 +15,7 @@ class TariffModel(BaseModel):
     """Define a Pydantic model for Tariffs"""
     code: str = Field(max_length=30)
     label: str = Field(max_length=100)
-    price: float | None = None  # None = prix de base de la séance
+    price: float = Field(ge=0)  # prix en euros, identique pour toutes les séances
     min_age: int | None = None  # âge minimum inclus (None = pas de minimum)
     max_age: int | None = None  # âge maximum inclus (None = pas de maximum)
     requires_ensai: bool = False

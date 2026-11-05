@@ -18,7 +18,6 @@ class ScreeningDao(metaclass=Singleton):
             id_movie=row["id_movie"],
             id_admin=row["id_admin"],
             date_time=row["date_time"],
-            base_price=float(row["base_price"]),  # NUMERIC revient en Decimal
             available_seats=row["available_seats"],
         )
 
@@ -87,10 +86,10 @@ class ScreeningDao(metaclass=Singleton):
     def insert_screening(self, screening: Screening) -> bool:
         query = """
             INSERT INTO public.screening
-                (id_room, id_movie, id_admin, date_time, base_price, available_seats)
+                (id_room, id_movie, id_admin, date_time, available_seats)
             VALUES
                 (%(id_room)s, %(id_movie)s, %(id_admin)s, %(date_time)s,
-                 %(base_price)s, %(available_seats)s)
+                 %(available_seats)s)
             RETURNING id_screening;
         """
         data = {
@@ -98,7 +97,6 @@ class ScreeningDao(metaclass=Singleton):
             "id_movie": screening.id_movie,
             "id_admin": screening.id_admin,
             "date_time": screening.date_time,
-            "base_price": screening.base_price,
             "available_seats": screening.available_seats,
         }
         try:
@@ -119,7 +117,7 @@ class ScreeningDao(metaclass=Singleton):
         query = """
             UPDATE public.screening
             SET id_room = %(id_room)s, id_movie = %(id_movie)s, id_admin = %(id_admin)s,
-                date_time = %(date_time)s, base_price = %(base_price)s,
+                date_time = %(date_time)s,
                 available_seats = %(available_seats)s
             WHERE id_screening = %(id_screening)s
             RETURNING id_screening;
@@ -130,7 +128,6 @@ class ScreeningDao(metaclass=Singleton):
             "id_movie": screening.id_movie,
             "id_admin": screening.id_admin,
             "date_time": screening.date_time,
-            "base_price": screening.base_price,
             "available_seats": screening.available_seats,
         }
         try:
