@@ -39,7 +39,6 @@ class RoomDao(metaclass=Singleton):
             raise
         return self._to_room(res) if res else None
 
-
     # POST
     @log
     def insert_room(self, room: Room) -> bool:
