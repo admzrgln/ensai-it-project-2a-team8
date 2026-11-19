@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from backend.src.DAO.BookingDAO import BookingDao
 from backend.src.DAO.MovieDAO import MovieDao
 from backend.src.DAO.RoomDAO import RoomDao
-from backend.src.DAO.ScreeningDAO import ScreeningDao
+from backend.src.DAO.ScreeningDAO import CLEANING_BUFFER_MINUTES, ScreeningDao
 from backend.src.DAO.UserDAO import UserDao
 from backend.src.Model.Screening import Screening  # noqa: TC001
 from utils.log_utils import log
@@ -92,7 +92,8 @@ class ScreeningService:
         if overlapping:
             ids = ", ".join(str(o.id_screening) for o in overlapping)
             raise ScreeningError(
-                f"Room {screening.id_room} is already used at this time (screening {ids})"
+                f"Room {screening.id_room} is already used at this time (screening {ids}); "
+                f"{CLEANING_BUFFER_MINUTES} minutes are required between two screenings"
             )
 
     def _validate(self, screening: Screening, booked_seats: int = 0) -> None:

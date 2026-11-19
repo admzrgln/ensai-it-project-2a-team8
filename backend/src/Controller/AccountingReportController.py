@@ -2,10 +2,9 @@ import logging
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
-from backend.src.Controller.JWTBearer import require_admin
-
 from pydantic import BaseModel
 
+from backend.src.Controller.JWTBearer import require_admin
 from backend.src.Service.AccountingReportService import AccountingReportService
 
 accounting_router = APIRouter(prefix="/accounting-reports")
@@ -13,12 +12,23 @@ accounting_service = AccountingReportService()
 
 
 class MovieRevenueModel(BaseModel):
-    """Pydantic model for one line of the report"""
+    """Pydantic model for one revenue line of the report"""
 
     id_movie: int
     title: str
     revenue: float
     tickets_sold: int
+
+
+class MovieOccupancyModel(BaseModel):
+    """Pydantic model for one occupancy line of the report"""
+
+    id_movie: int
+    title: str
+    screenings: int
+    seats_offered: int
+    seats_sold: int
+    occupancy_rate: float  # in %
 
 
 class AccountingReportModel(BaseModel):
@@ -29,7 +39,9 @@ class AccountingReportModel(BaseModel):
     total_amount: float
     tickets_sold: int
     average_ticket_price: float
+    occupancy_rate: float  # in %, over the screenings already started in the period
     movie_revenues: list[MovieRevenueModel]
+    movie_occupancies: list[MovieOccupancyModel]
 
 
 @accounting_router.get("/", tags=["Accounting"], response_model=AccountingReportModel)
@@ -51,6 +63,7 @@ async def get_accounting_report(period_start: date, period_end: date, admin: dic
         total_amount=report.total_amount,
         tickets_sold=report.tickets_sold,
         average_ticket_price=report.average_ticket_price,
+        occupancy_rate=report.occupancy_rate,
         movie_revenues=[
             MovieRevenueModel(
                 id_movie=m.id_movie,
@@ -59,5 +72,16 @@ async def get_accounting_report(period_start: date, period_end: date, admin: dic
                 tickets_sold=m.tickets_sold,
             )
             for m in report.movie_revenues
+        ],
+        movie_occupancies=[
+            MovieOccupancyModel(
+                id_movie=o.id_movie,
+                title=o.title,
+                screenings=o.screenings,
+                seats_offered=o.seats_offered,
+                seats_sold=o.seats_sold,
+                occupancy_rate=o.occupancy_rate,
+            )
+            for o in report.movie_occupancies
         ],
     )

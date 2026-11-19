@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from backend.src.Controller.JWTBearer import require_admin
 from backend.src.Service.OmdbClient import OmdbError
 from backend.src.Service.MovieService import MovieService
-from backend.src.Model.Movie import Movie  # Import indispensable pour instancier l'objet métier
+from backend.src.Model.Movie import Movie  
 
 movie_router = APIRouter(prefix="/movies")
 movie_service = MovieService()
@@ -95,7 +95,6 @@ async def update_movie(id_movie: int, movie_data: MovieModel):
         raise HTTPException(status_code=404, detail="Movie not found or update failed")
         
     return {"message": "Movie updated successfully", "movie": updated_movie}
-
 
 
 @movie_router.delete("/{id_movie}", tags=["Movies"], dependencies=[Depends(require_admin)])

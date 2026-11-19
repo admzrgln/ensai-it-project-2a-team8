@@ -4,6 +4,7 @@ from utils.log_utils import get_logger, log
 from utils.singleton import Singleton
 
 logger = get_logger(__name__)
+logger = CLEANING_BUFFER_MINUTES = 30
 
 
 class ScreeningDao(metaclass=Singleton):
@@ -58,22 +59,24 @@ class ScreeningDao(metaclass=Singleton):
 
     @log
     def find_overlapping(self, id_room: int, start, end,
-                         exclude_id: int | None = None) -> list[Screening]:
-        """List the screenings of a room that overlap the interval [start, end).
+                         exclude_id: int | None = None,
+                         buffer_minutes: int = CLEANING_BUFFER_MINUTES) -> list[Screening]:
+        """List the screenings of a room that overlap [start, end), with a cleaning gap on both sides.
 
-        exclude_id : id d'une séance à ignorer (utile pour la modification,
-        sinon une séance serait en conflit avec elle-même).
+        Two screenings are in conflict if less than `buffer_minutes` separate the end of one
+        from the start of the other. exclude_id : séance à ignorer (modification).
         """
         query = """
             SELECT s.*
             FROM public.screening s
             JOIN public.movie m ON m.id_movie = s.id_movie
             WHERE s.id_room = %(id_room)s
-              AND s.date_time < %(end)s
-              AND s.date_time + (m.duration * INTERVAL '1 minute') > %(start)s
+              AND s.date_time < %(end)s + (%(buffer)s * INTERVAL '1 minute')
+              AND s.date_time + ((m.duration + %(buffer)s) * INTERVAL '1 minute') > %(start)s
               AND (%(exclude_id)s::int IS NULL OR s.id_screening <> %(exclude_id)s);
         """
-        data = {"id_room": id_room, "start": start, "end": end, "exclude_id": exclude_id}
+        data = {"id_room": id_room, "start": start, "end": end, "exclude_id": exclude_id,
+                "buffer": buffer_minutes}
         try:
             res = DBConnector().sql_query(query, data=data, return_type="all")
         except Exception as e:

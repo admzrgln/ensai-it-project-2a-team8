@@ -1,8 +1,8 @@
-from datetime import date
+from datetime import date, datetime
 
 from backend.src.DAO.TariffDAO import TariffDao
-from backend.src.Model.Ticket import Ticket
 from backend.src.Model.Tariff import Tariff
+from backend.src.Model.Ticket import Ticket
 from utils.log_utils import log
 
 # Plein tarif : sans condition et impossible à désactiver, donc toujours applicable
@@ -27,18 +27,20 @@ class TariffService:
     def __init__(self):
         self.tariff_dao = TariffDao()
 
-    def price_ticket(self, ticket: Ticket, screening_date: date,
+    def price_ticket(self, ticket: Ticket, screening_dt: datetime,
                      tariffs: list[Tariff] | None = None) -> Ticket:
         """Fill ticket.tariff_code and ticket.price with the cheapest tariff the person is entitled to.
 
+        screening_dt : date ET heure de la séance (l'âge est calculé le jour de la séance,
+        et les tarifs horaires comme "mercredi après-midi" dépendent de l'heure de début).
         tariffs : grille déjà chargée (évite de relire la base pour chaque billet).
-        L'âge est calculé le jour de la séance.
         """
         if tariffs is None:
             tariffs = self.tariff_dao.find_all(only_active=True)
-        age = compute_age(ticket.date_of_birth, screening_date)
+        age = compute_age(ticket.date_of_birth, screening_dt.date())
 
-        eligible = [t for t in tariffs if t.is_eligible(age, ticket.is_ensai_student, ticket.is_student)]
+        eligible = [t for t in tariffs
+                    if t.is_eligible(age, ticket.is_ensai_student, ticket.is_student, screening_dt)]
         if not eligible:
             raise TariffError(f"No tariff applies: the '{FULL_TARIFF_CODE}' tariff is missing from the grid")
         best = min(eligible, key=lambda t: t.price)
@@ -47,7 +49,7 @@ class TariffService:
         ticket.price = round(best.price, 2)
         return ticket
 
-    def _check(self, tariff: Tariff) -> None:
+    def check(self, tariff: Tariff) -> None:
         if not tariff.code or not tariff.label:
             raise TariffError("Code and label are required")
         if tariff.price is None or tariff.price < 0:
@@ -57,6 +59,10 @@ class TariffService:
                 raise TariffError("Ages must be positive")
         if tariff.min_age is not None and tariff.max_age is not None and tariff.min_age > tariff.max_age:
             raise TariffError("min_age must be lower than max_age")
+        if tariff.weekday is not None and not 0 <= tariff.weekday <= 6:
+            raise TariffError("weekday must be between 0 (Monday) and 6 (Sunday)")
+        if tariff.time_from is not None and tariff.time_until is not None and tariff.time_from >= tariff.time_until:
+            raise TariffError("time_from must be before time_until")
         if tariff.code == FULL_TARIFF_CODE and not tariff.is_active:
             raise TariffError(f"The '{FULL_TARIFF_CODE}' tariff can't be deactivated")
         if tariff.code == FULL_TARIFF_CODE and tariff.has_conditions:

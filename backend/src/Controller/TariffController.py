@@ -1,4 +1,5 @@
 import logging
+from datetime import time
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -21,6 +22,9 @@ class TariffModel(BaseModel):
     requires_ensai: bool = False
     requires_student: bool = False
     is_active: bool = True
+    weekday: int | None = Field(default=None, ge=0, le=6, description="0 = lundi ... 6 = dimanche (None = tous les jours)")
+    time_from: time | None = Field(default=None, description="Heure de début de séance minimale (incluse)")
+    time_until: time | None = Field(default=None, description="Heure de début de séance maximale (exclue)")
 
 
 def _call(fn, *args):

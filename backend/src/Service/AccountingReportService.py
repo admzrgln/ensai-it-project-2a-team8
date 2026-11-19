@@ -30,7 +30,7 @@ class AccountingReportService:
 
     @log
     def generate_report(self, period_start: date, period_end: date, id_admin: int) -> AccountingReport:
-        """Build the accounting report of a period (both bounds inclusive).
+        """Build the accounting report of a period (both bounds inclusive): revenue + occupancy.
 
         Raises
         ------
@@ -42,10 +42,12 @@ class AccountingReportService:
         self._check_admin(id_admin)
 
         movie_revenues = self.report_dao.find_movie_revenues(period_start, period_end)
+        movie_occupancies = self.report_dao.find_movie_occupancy(period_start, period_end)
 
         return AccountingReport(
             period_start=period_start,
             period_end=period_end,
             movie_revenues=movie_revenues,
             id_admin=id_admin,
+            movie_occupancies=movie_occupancies,
         )

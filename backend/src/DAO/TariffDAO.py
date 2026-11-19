@@ -14,12 +14,15 @@ class TariffDao(metaclass=Singleton):
         return Tariff(
             code=row["code"],
             label=row["label"],
-            price=float(row["price"]),  # NUMERIC revient en Decimal
+            price=float(row["price"]), 
             min_age=row["min_age"],
             max_age=row["max_age"],
             requires_ensai=row["requires_ensai"],
             requires_student=row["requires_student"],
             is_active=row["is_active"],
+            weekday=row.get("weekday"),
+            time_from=row.get("time_from"),
+            time_until=row.get("time_until"),
         )
 
     @staticmethod
@@ -33,6 +36,9 @@ class TariffDao(metaclass=Singleton):
             "requires_ensai": tariff.requires_ensai,
             "requires_student": tariff.requires_student,
             "is_active": tariff.is_active,
+            "weekday": tariff.weekday,
+            "time_from": tariff.time_from,
+            "time_until": tariff.time_until,
         }
 
     # GET
@@ -64,10 +70,12 @@ class TariffDao(metaclass=Singleton):
     def insert_tariff(self, tariff: Tariff) -> bool:
         query = """
             INSERT INTO public.tariff
-                (code, label, price, min_age, max_age, requires_ensai, requires_student, is_active)
+                (code, label, price, min_age, max_age, requires_ensai, requires_student, is_active,
+                 weekday, time_from, time_until)
             VALUES
                 (%(code)s, %(label)s, %(price)s, %(min_age)s, %(max_age)s,
-                 %(requires_ensai)s, %(requires_student)s, %(is_active)s)
+                 %(requires_ensai)s, %(requires_student)s, %(is_active)s,
+                 %(weekday)s, %(time_from)s, %(time_until)s)
             RETURNING code;
         """
         try:
@@ -83,7 +91,8 @@ class TariffDao(metaclass=Singleton):
             UPDATE public.tariff
             SET label = %(label)s, price = %(price)s, min_age = %(min_age)s, max_age = %(max_age)s,
                 requires_ensai = %(requires_ensai)s, requires_student = %(requires_student)s,
-                is_active = %(is_active)s
+                is_active = %(is_active)s,
+                weekday = %(weekday)s, time_from = %(time_from)s, time_until = %(time_until)s
             WHERE code = %(code)s
             RETURNING code;
         """
@@ -93,7 +102,6 @@ class TariffDao(metaclass=Singleton):
             logger.error(f"Erreur lors de la mise à jour du tarif : {e}")
         return False
 
-    # "DELETE" = désactivation (les anciens billets gardent leur tarif)
     @log
     def deactivate_tariff(self, code: str) -> bool:
         query = """
