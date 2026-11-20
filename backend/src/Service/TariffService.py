@@ -49,7 +49,7 @@ class TariffService:
         ticket.price = round(best.price, 2)
         return ticket
 
-    def check(self, tariff: Tariff) -> None:
+    def _check(self, tariff: Tariff) -> None:
         if not tariff.code or not tariff.label:
             raise TariffError("Code and label are required")
         if tariff.price is None or tariff.price < 0:
