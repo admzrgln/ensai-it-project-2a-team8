@@ -6,6 +6,7 @@ from backend.src.DAO.UserDAO import UserDao
 from backend.src.Model.Booking import Booking
 from backend.src.Model.Ticket import Ticket
 from backend.src.Service.TariffService import TariffError, TariffService
+from backend.src.Service.PriceRevisionService import PriceRevisionService
 from utils.log_utils import log
 
 MAX_TICKETS_PER_BOOKING = 10
@@ -27,6 +28,7 @@ class BookingService:
         self.screening_dao = ScreeningDao()
         self.user_dao = UserDao()
         self.tariff_service = TariffService()
+        self.price_revision_service = PriceRevisionService()
 
     def _build_booking(
         self,
@@ -36,7 +38,6 @@ class BookingService:
         customer_is_student: bool,
         guests: list[Ticket],
     ) -> Booking:
- 
         customer = self.user_dao.find_by_id(id_customer)
         if customer is None or customer.role != "customer":
             raise BookingError("Only customers can book a screening")
@@ -54,7 +55,7 @@ class BookingService:
             tickets.append(Ticket(
                 first_name=customer.first_name,
                 last_name=customer.last_name,
-                date_of_birth=customer.date_of_birth, 
+                date_of_birth=customer.date_of_birth,
                 is_holder=True,
                 is_ensai_student=customer.is_ensai_student,
                 is_student=customer_is_student,
@@ -74,6 +75,7 @@ class BookingService:
         if len(tickets) > screening.available_seats:
             raise NotEnoughSeatsError(f"Only {screening.available_seats} seat(s) left for this screening")
 
+        self.price_revision_service.apply_due_revisions()
         grid = self.tariff_service.find_all(only_active=True)
         try:
             for t in tickets:

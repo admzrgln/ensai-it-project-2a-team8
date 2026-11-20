@@ -1,15 +1,27 @@
+from contextlib import asynccontextmanager
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
+from backend.src.Service.PriceRevisionService import PriceRevisionService
+
 from .AccountingReportController import accounting_router
 from .BookingController import booking_router
 from .MovieController import movie_router
+from .PriceRevisionController import price_revision_router
 from .RoomController import room_router
 from .ScreeningController import screening_router
 from .TariffController import tariff_router
 from .UserController import user_router
-from .PriceRevisionController import price_revision_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Exécuté au démarrage de l'API : applique les révisions de prix dont l'année a commencé
+    (rattrape un 1er janvier passé pendant que le serveur était éteint)."""
+    PriceRevisionService().apply_due_revisions()
+    yield
 
 
 def run_app():
@@ -17,6 +29,7 @@ def run_app():
         title="Projet Info 2A",
         description="Example project for ENSAI students",
         root_path="/proxy/8001",
+        lifespan=lifespan,
     )
 
     app.include_router(user_router)
