@@ -48,17 +48,16 @@ class AccountingReportDao(metaclass=Singleton):
         """
         query = """
             SELECT m.id_movie,
-                   m.title,
-                   SUM(bl.quantity * bl.unit_price) AS revenue,
-                   SUM(bl.quantity)                 AS tickets_sold
-            FROM payment p
-            JOIN booking      b  ON b.id_payment   = p.id_payment
-            JOIN booking_line bl ON bl.id_booking  = b.id_booking
-            JOIN screening    s  ON s.id_screening = b.id_screening
-            JOIN movie        m  ON m.id_movie     = s.id_movie
-            WHERE p.status = 'paid'
-              AND p.payment_date >= %(start)s
-              AND p.payment_date <  %(end_exclusive)s
+                m.title,
+                COALESCE(SUM(t.price), 0) AS revenue,
+                COUNT(t.id_ticket)        AS tickets_sold
+            FROM public.booking b
+            JOIN public.ticket    t ON t.id_booking   = b.id_booking
+            JOIN public.screening s ON s.id_screening = b.id_screening
+            JOIN public.movie     m ON m.id_movie     = s.id_movie
+            WHERE b.status = 'confirmed'
+              AND b.booking_date >= %(start)s
+              AND b.booking_date <  %(end_exclusive)s
             GROUP BY m.id_movie, m.title
             ORDER BY revenue DESC, m.title;
         """
