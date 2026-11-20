@@ -68,7 +68,7 @@ class Tariff:
             return False
         if self.requires_student and not (is_student or is_ensai_student):
             return False
-        if self.has_schedule_condition and not self._matches_schedule(screening_dt):
+        if self.has_schedule_condition and not self.matches_schedule(screening_dt):
             return False
         return True
 

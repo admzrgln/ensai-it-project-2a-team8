@@ -36,19 +36,17 @@ class BookingService:
         customer_is_student: bool,
         guests: list[Ticket],
     ) -> Booking:
-        # 1. Le client existe et est bien un customer
+ 
         customer = self.user_dao.find_by_id(id_customer)
         if customer is None or customer.role != "customer":
             raise BookingError("Only customers can book a screening")
 
-        # 2. La séance existe et n'a pas encore commencé
         screening = self.screening_dao.find_by_id(id_screening)
         if screening is None:
             raise BookingError("Screening not found")
         if screening.date_time <= datetime.now():
             raise BookingError("This screening has already started")
 
-        # 3. Construire la liste des billets
         tickets: list[Ticket] = []
         if include_myself:
             if customer.date_of_birth is None:
@@ -56,7 +54,7 @@ class BookingService:
             tickets.append(Ticket(
                 first_name=customer.first_name,
                 last_name=customer.last_name,
-                date_of_birth=customer.date_of_birth,  # déjà connue depuis l'inscription
+                date_of_birth=customer.date_of_birth, 
                 is_holder=True,
                 is_ensai_student=customer.is_ensai_student,
                 is_student=customer_is_student,
@@ -79,7 +77,7 @@ class BookingService:
         grid = self.tariff_service.find_all(only_active=True)
         try:
             for t in tickets:
-                self.tariff_service.price_ticket(t, screening.date_time.date(), grid)
+                self.tariff_service.price_ticket(t, screening.date_time, grid)
         except TariffError as e:
             raise BookingError(str(e)) from e
 

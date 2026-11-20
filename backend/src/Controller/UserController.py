@@ -9,9 +9,12 @@ from backend.src.Model.Administrator import Administrator
 from backend.src.Model.Customer import Customer
 from backend.src.Model.User import User
 from backend.src.Service.UserService import UserService
+from backend.src.Service.TariffService import TariffService, compute_age
+
 
 user_router = APIRouter(prefix="/users")
 user_service = UserService()
+tariff_service = TariffService()
 
 VALID_ROLES = {"admin", "customer"}
 
@@ -135,8 +138,11 @@ async def create_user(user_data: UserCreateModel):
     today = date.today()
     dob = created_user.date_of_birth
     age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-
-    eligible_tariffs = ["Full price (11.5€)"]
+    eligible_tariffs = [
+        f"{t.label} ({t.price:.2f}€)"
+        for t in tariff_service.find_all(only_active=True)
+        if not t.has_schedule_condition and t.is_eligible(age, created_user.is_ensai_student, False)
+    ]
 
     if age <= 13:
         eligible_tariffs.append("Under 14 (6€)")

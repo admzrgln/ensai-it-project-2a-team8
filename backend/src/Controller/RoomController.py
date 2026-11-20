@@ -15,14 +15,6 @@ async def find_all_rooms():
     return room_service.find_all()
 
 
-# Cette route doit être AVANT /{id_room}, sinon "type" serait interprété comme un id
-@room_router.get("/type/{room_type}", tags=["Rooms"])
-async def rooms_by_type(room_type: str):
-    """Find rooms by type"""
-    logging.info(f"Find rooms by type: {room_type}")
-    return room_service.find_by_type(room_type)
-
-
 @room_router.get("/{id_room}", tags=["Rooms"])
 async def room_by_id(id_room: int):
     """Find a room by id"""

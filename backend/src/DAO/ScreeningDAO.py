@@ -4,7 +4,7 @@ from utils.log_utils import get_logger, log
 from utils.singleton import Singleton
 
 logger = get_logger(__name__)
-logger = CLEANING_BUFFER_MINUTES = 30
+CLEANING_BUFFER_MINUTES = 30
 
 
 class ScreeningDao(metaclass=Singleton):
