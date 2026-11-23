@@ -4,8 +4,8 @@ from datetime import date
 
 class User(ABC):
     """Abstract base class representing a generic user."""
-    
-    def __init__(self, id_user: int | None, first_name: str, last_name: str, 
+
+    def __init__(self, id_user: int | None, first_name: str, last_name: str,
                  email: str, password: str, date_of_birth: date | None, role: str,
                  salt: str | None = None):
         self.id_user = id_user

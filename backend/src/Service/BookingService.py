@@ -5,8 +5,8 @@ from backend.src.DAO.ScreeningDAO import ScreeningDao
 from backend.src.DAO.UserDAO import UserDao
 from backend.src.Model.Booking import Booking
 from backend.src.Model.Ticket import Ticket
-from backend.src.Service.TariffService import TariffError, TariffService
 from backend.src.Service.PriceRevisionService import PriceRevisionService
+from backend.src.Service.TariffService import TariffError, TariffService
 from utils.log_utils import log
 
 MAX_TICKETS_PER_BOOKING = 10

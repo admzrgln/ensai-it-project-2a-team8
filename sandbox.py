@@ -1,21 +1,19 @@
-import os
 from datetime import datetime, timedelta
-from backend.src.Service.ScreeningService import ScreeningService
-from backend.src.Model.Movie import Movie
-from backend.src.DAO.MovieDAO import MovieDao
-from backend.src.Service.MovieService import MovieService
-from backend.src.DAO.UserDAO import UserDao
-from backend.src.DAO.MovieDAO import MovieDao
-from backend.src.DAO.RoomDAO import RoomDao
-from backend.src.DAO.ScreeningDAO import ScreeningDao
-from backend.src.Model.Movie import Movie
-from backend.src.Model.Room import Room
-from backend.src.Model.Screening import Screening
-
 
 # Si tes variables de connexion sont dans le fichier .env vu sur ta capture,
 # décommente les deux lignes suivantes pour les charger automatiquement :
 from dotenv import load_dotenv
+
+from backend.src.DAO.MovieDAO import MovieDao
+from backend.src.DAO.RoomDAO import RoomDao
+from backend.src.DAO.ScreeningDAO import ScreeningDao
+from backend.src.DAO.UserDAO import UserDao
+from backend.src.Model.Movie import Movie
+from backend.src.Model.Room import Room
+from backend.src.Model.Screening import Screening
+from backend.src.Service.MovieService import MovieService
+from backend.src.Service.ScreeningService import ScreeningService
+
 load_dotenv()
 
 
@@ -23,10 +21,10 @@ def run_sandbox():
     print("Initialisation du MovieDAO...")
     # Grâce au pattern Singleton, on l'instancie simplement comme ceci
     dao = MovieDao()
-    
+
     print("Récupération des films via find_all()...")
     movies = dao.find_all()
-    
+
     print(f"\nSuccès ! {len(movies)} films ont été trouvés dans la base de données :")
     for movie in movies:
         print(f" - {movie.title} ({movie.duration} min) [{movie.genre}]")
@@ -34,10 +32,10 @@ def run_sandbox():
     print("\n--- Test de find_by_id() ---")
     id_test = 1
     movie = dao.find_by_id(id_test)
-    
+
     if movie:
         print("Succès ! Voici le film trouvé :")
-        print(movie) 
+        print(movie)
     else:
         print(f"Échec : Aucun film avec l'id_movie {id_test}.")
 
@@ -97,8 +95,8 @@ def test_movie_service():
     # --- TEST 1 : Recherche (Read) ---
     print("--- Test de find_by_id ---")
     # Mets un ID que tu sais être présent dans ta base (ex: 8)
-    movie_found = service.find_by_id(8) 
-    
+    movie_found = service.find_by_id(8)
+
     if movie_found:
         print(f"Succès : Film trouvé -> {movie_found.title}")
     else:
@@ -113,7 +111,7 @@ def test_movie_service():
         external_id="tt15239678",
         poster_url="https://example.com/dune2.jpg"
     )
-    
+
     is_created = service.create_movie(new_movie)
     print(f"Insertion réussie : {is_created}")
     if is_created:
@@ -181,14 +179,10 @@ def run_test_service(id_movie: int, id_room: int, id_user: int):
 
 
 from datetime import date
+
 from backend.src.Model.Customer import Customer
-from backend.src.Model.Administrator import Administrator
-from backend.src.DAO.UserDAO import UserDao
-
-
 
 # L'import respecte scrupuleusement la casse de ton fichier "UserDAO.py"
-from backend.src.DAO.UserDAO import UserDao
 
 
 def run_sandbox4():
@@ -197,7 +191,7 @@ def run_sandbox4():
 
     print("Récupération des utilisateurs via find_all_user()...")
     users = dao.find_all_user()
-    
+
     if not users:
         print("\nAucun utilisateur trouvé dans la base de données.")
         return
@@ -224,7 +218,7 @@ def test_insert_user():
     )
 
     print(f"\nTentative d'insertion du client : {nouveau_client.email}...")
-    
+
     # 2. Appel de la méthode d'insertion
     client_insere = dao.insert_user(nouveau_client)
 
@@ -240,7 +234,7 @@ def test_insert_user():
 
 if __name__ == "__main__":
     test_insert_user()
-    
+
 
 
 

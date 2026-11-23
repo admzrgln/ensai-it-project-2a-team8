@@ -8,9 +8,8 @@ from backend.src.Controller.JWTBearer import get_current_user, jwt_service, requ
 from backend.src.Model.Administrator import Administrator
 from backend.src.Model.Customer import Customer
 from backend.src.Model.User import User
+from backend.src.Service.TariffService import TariffService
 from backend.src.Service.UserService import UserService
-from backend.src.Service.TariffService import TariffService, compute_age
-
 
 user_router = APIRouter(prefix="/users")
 user_service = UserService()

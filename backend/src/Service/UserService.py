@@ -1,9 +1,8 @@
 from backend.src.DAO.UserDAO import UserDao  # noqa: N999
-from backend.src.Model.User import User
 from backend.src.Model.Customer import Customer
-from backend.src.Model.Administrator import Administrator
-from utils.log_utils import log
+from backend.src.Model.User import User
 from backend.src.Service.PasswordService import check_password_strength, create_salt, hash_password
+from utils.log_utils import log
 
 
 class UserService:
