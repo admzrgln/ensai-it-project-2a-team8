@@ -129,6 +129,24 @@ def test_update_user_ensai_email(service):
     assert service.update_user(2, make_customer(email="l@ensai.fr")).is_ensai_student is True
 
 
+def test_update_user_email_of_another_account_refused(service):
+    """Sinon la contrainte UNIQUE sur l'email ferait une erreur 500."""
+    service.user_dao.find_user_by_email.return_value = Customer(
+        3, "Autre", "Client", "l@mail.fr", "hash", BIRTH, salt="sel"
+    )
+
+    assert service.update_user(2, make_customer(id_user=2)) is None
+    service.user_dao.update_user.assert_not_called()
+
+
+def test_update_user_can_keep_own_email(service):
+    """L'email trouvé en base est celui du compte modifié : ce n'est pas un doublon."""
+    service.user_dao.find_user_by_email.return_value = stored_user()  # id_user = 2
+
+    assert service.update_user(2, make_customer(id_user=2)) is not None
+    service.user_dao.update_user.assert_called_once()
+
+
 def test_update_user_not_found(service):
     service.user_dao.update_user.side_effect = None
     service.user_dao.update_user.return_value = None

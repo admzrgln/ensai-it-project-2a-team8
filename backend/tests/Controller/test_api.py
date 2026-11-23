@@ -33,3 +33,16 @@ def test_root_redirects_to_docs(app):
     response = TestClient(app).get("/", follow_redirects=False)
     assert response.status_code == 307
     assert response.headers["location"].endswith("/docs")
+
+
+def test_due_price_revisions_are_applied_at_startup(app):
+    """Au démarrage, l'API applique les révisions de prix dont l'année a commencé.
+
+    `with TestClient(app)` déclenche le lifespan (démarrage puis arrêt de l'application).
+    """
+    with patch("backend.src.Controller.API.PriceRevisionService") as service_cls:
+        with TestClient(app):
+            pass
+
+    service_cls.return_value.apply_due_revisions.assert_called_once_with()
+

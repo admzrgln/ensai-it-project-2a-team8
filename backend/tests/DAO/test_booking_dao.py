@@ -273,3 +273,37 @@ def test_find_by_customer_propagates_db_error(dao, sql_query):
     sql_query.side_effect = Exception("db down")
     with pytest.raises(Exception, match="db down"):
         dao.find_by_customer(10)
+
+
+# --------------------------------------------------------------------------
+# count_booked_seats (utilisé à la modification d'une séance)
+# --------------------------------------------------------------------------
+def test_count_booked_seats(sql_query):
+    """SUM renvoie un Decimal avec psycopg2 : on le convertit en int."""
+    sql_query.return_value = {"booked": Decimal("12")}
+
+    assert BookingDao().count_booked_seats(3) == 12
+    assert sql_query.call_args.kwargs["data"] == {"id": 3}
+    assert sql_query.call_args.kwargs["return_type"] == "one"
+
+
+def test_count_booked_seats_ignores_cancelled_bookings(sql_query):
+    sql_query.return_value = {"booked": 0}
+
+    BookingDao().count_booked_seats(3)
+
+    assert "status = 'confirmed'" in sql_query.call_args.args[0]
+
+
+def test_count_booked_seats_no_row_gives_zero(sql_query):
+    sql_query.return_value = None
+
+    assert BookingDao().count_booked_seats(3) == 0
+
+
+def test_count_booked_seats_reraises_database_error(sql_query):
+    sql_query.side_effect = Exception("db down")
+
+    with pytest.raises(Exception, match="db down"):
+        BookingDao().count_booked_seats(3)
+

@@ -380,6 +380,28 @@ def test_update_user_failure_gives_404(mock_service):
     assert response.json()["detail"] == "User not found or update failed"
 
 
+@patch(SERVICE)
+def test_update_unknown_user_gives_404(mock_service):
+    mock_service.find_by_id.return_value = None
+
+    response = client.put(f"{BASE_URL}/999", json=update_data, headers=ADMIN)
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "User not found or update failed"
+    mock_service.update_user.assert_not_called()
+
+
+@patch(SERVICE)
+def test_admin_cannot_set_an_invalid_role(mock_service):
+    mock_service.find_by_id.return_value = make_customer()
+
+    response = client.put(f"{BASE_URL}/2", json={**update_data, "role": "superuser"}, headers=ADMIN)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Role must be 'admin' or 'customer'"
+    mock_service.update_user.assert_not_called()
+
+
 # =====================================================================================
 # DELETE /users/{id}
 # =====================================================================================
