@@ -1,20 +1,42 @@
+from datetime import datetime, time
+
 import pytest
 
 from backend.src.Model.Tariff import Tariff
 
 
 def test_tariff_constructor_defaults():
-    t = Tariff("full", "Plein tarif")
-    assert (t.code, t.label) == ("full", "Plein tarif")
-    assert t.price is None
+    t = Tariff("full", "Plein tarif", 9.0)
+    assert (t.code, t.label, t.price) == ("full", "Plein tarif", 9.0)
     assert t.min_age is None and t.max_age is None
     assert t.requires_ensai is False and t.requires_student is False
     assert t.is_active is True
+    assert t.weekday is None and t.time_from is None and t.time_until is None
+
+
+def test_tariff_without_condition_has_no_conditions():
+    t = Tariff("full", "Plein tarif", 9.0)
+    assert t.has_conditions is False
+    assert t.has_schedule_condition is False
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        pytest.param({"min_age": 65}, id="min_age"),
+        pytest.param({"max_age": 13}, id="max_age"),
+        pytest.param({"requires_ensai": True}, id="ensai"),
+        pytest.param({"requires_student": True}, id="student"),
+        pytest.param({"weekday": 2}, id="weekday"),
+    ],
+)
+def test_any_condition_makes_has_conditions_true(overrides):
+    assert Tariff("x", "x", 5.0, **overrides).has_conditions is True
 
 
 # --- is_eligible ----------------------------------------------------------
 def test_tariff_without_condition_is_for_everyone():
-    t = Tariff("full", "Plein tarif")
+    t = Tariff("full", "Plein tarif", 9.0)
     assert t.is_eligible(age=40, is_ensai_student=False, is_student=False)
     assert t.is_eligible(age=0, is_ensai_student=True, is_student=True)
 
@@ -57,23 +79,62 @@ def test_all_conditions_must_be_met():
     assert not t.is_eligible(22, False, False)  # pas étudiant·e
 
 
-# --- price_for ------------------------------------------------------------
-def test_price_none_means_base_price():
-    assert Tariff("full", "Plein tarif").price_for(9.0) == 9.0
+# --- conditions de jour / d'horaire --------------------------------------------
+# Mercredi 16 décembre 2026 (weekday = 2)
+WEDNESDAY_2PM = datetime(2026, 12, 16, 14, 0)
+WEDNESDAY_6PM = datetime(2026, 12, 16, 18, 0)
+THURSDAY_2PM = datetime(2026, 12, 17, 14, 0)
 
 
-def test_fixed_price_below_base_price():
-    assert Tariff("student", "Étudiant·e", 6.0).price_for(9.0) == 6.0
+def wednesday_afternoon() -> Tariff:
+    return Tariff("wed", "Mercredi après-midi", 6.5, weekday=2, time_from=time(12, 0), time_until=time(18, 0))
 
 
-def test_price_never_above_base_price():
-    assert Tariff("student", "Étudiant·e", 6.0).price_for(4.0) == 4.0
+def test_schedule_tariff_has_schedule_condition():
+    assert wednesday_afternoon().has_schedule_condition is True
+    assert Tariff("x", "x", 5.0, time_from=time(10, 0)).has_schedule_condition is True
+    assert Tariff("x", "x", 5.0, time_until=time(10, 0)).has_schedule_condition is True
 
 
-def test_free_tariff():
-    assert Tariff("free", "Invitation", 0.0).price_for(9.0) == 0.0
+def test_matches_schedule_right_day_and_time():
+    assert wednesday_afternoon().matches_schedule(WEDNESDAY_2PM) is True
 
 
+def test_matches_schedule_wrong_day():
+    assert wednesday_afternoon().matches_schedule(THURSDAY_2PM) is False
+
+
+def test_matches_schedule_time_from_is_inclusive():
+    assert wednesday_afternoon().matches_schedule(datetime(2026, 12, 16, 12, 0)) is True
+    assert wednesday_afternoon().matches_schedule(datetime(2026, 12, 16, 11, 59)) is False
+
+
+def test_matches_schedule_time_until_is_exclusive():
+    assert wednesday_afternoon().matches_schedule(datetime(2026, 12, 16, 17, 59)) is True
+    assert wednesday_afternoon().matches_schedule(WEDNESDAY_6PM) is False
+
+
+def test_matches_schedule_without_date_is_false():
+    """Sans séance (ex. à l'inscription), un tarif horaire ne peut pas s'appliquer."""
+    assert wednesday_afternoon().matches_schedule(None) is False
+
+
+def test_is_eligible_with_schedule():
+    t = wednesday_afternoon()
+    assert t.is_eligible(30, False, False, WEDNESDAY_2PM) is True
+    assert t.is_eligible(30, False, False, THURSDAY_2PM) is False
+    assert t.is_eligible(30, False, False) is False  # pas de date de séance
+
+
+def test_tariff_without_schedule_ignores_screening_date():
+    t = Tariff("full", "Plein tarif", 9.0)
+    assert t.is_eligible(30, False, False, THURSDAY_2PM) is True
+
+
+# --- __str__ ---------------------------------------------------------------
 def test_tariff_str():
-    assert str(Tariff("student", "Étudiant·e", 6.0)) == "Tariff student : Étudiant·e (6.0)"
-    assert str(Tariff("full", "Plein tarif")) == "Tariff full : Plein tarif (prix de base)"
+    assert str(Tariff("student", "Étudiant·e", 6.0)) == "Tariff student : Étudiant·e (6.00€)"
+
+
+def test_tariff_str_without_price():
+    assert str(Tariff("full", "Plein tarif", None)) == "Tariff full : Plein tarif (no price)"

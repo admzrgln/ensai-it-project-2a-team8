@@ -1,87 +1,149 @@
-"""Unit tests of AccountingReportService.
-"""
 from datetime import date
+from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 
+from backend.src.DAO.AccountingReportDAO import AccountingReportDao
+from backend.src.Model.MovieOccupancy import MovieOccupancy
 from backend.src.Model.MovieRevenue import MovieRevenue
-from backend.src.Service.AccountingReportService import AccountingReportService
-
-
-class FakeUser:
-    def __init__(self, id_user, role):
-        self.id_user = id_user
-        self.role = role
-
-
-class FakeUserDao:
-    users = {1: FakeUser(1, "admin"), 2: FakeUser(2, "customer")}
-
-    def find_by_id(self, id_user):
-        return self.users.get(id_user)
-
-
-class FakeReportDao:
-    """Returns the October 2026 per-movie figures of the fake database."""
-
-    def __init__(self, rows=None):
-        self.rows = rows if rows is not None else [
-            MovieRevenue(id_movie=2, title="Oppenheimer", revenue=44.40, tickets_sold=4),
-            MovieRevenue(id_movie=1, title="Dune: Part Two", revenue=36.00, tickets_sold=4),
-        ]
-        self.calls = []
-
-    def find_movie_revenues(self, period_start, period_end):
-        self.calls.append((period_start, period_end))
-        return self.rows
-
-
-def make_service(rows=None):
-    return AccountingReportService(report_dao=FakeReportDao(rows), user_dao=FakeUserDao())
-
 
 OCT_START, OCT_END = date(2026, 10, 1), date(2026, 10, 31)
 
 
-def test_report_totals_match_fake_database():
-    report = make_service().generate_report(OCT_START, OCT_END, id_admin=1)
-
-    assert report.total_amount == 80.40
-    assert report.tickets_sold == 8
-    assert report.average_ticket_price == 10.05
-    assert [m.title for m in report.movie_revenues] == ["Oppenheimer", "Dune: Part Two"]
+@pytest.fixture
+def sql_query():
+    """Remplace DBConnector dans AccountingReportDAO : renvoie le mock de sql_query."""
+    with patch("backend.src.DAO.AccountingReportDAO.DBConnector") as connector_cls:
+        yield connector_cls.return_value.sql_query
 
 
-def test_period_is_passed_to_dao():
-    service = make_service()
-    service.generate_report(OCT_START, OCT_END, id_admin=1)
-    assert service.report_dao.calls == [(OCT_START, OCT_END)]
+@pytest.fixture
+def dao():
+    return AccountingReportDao()
 
 
-def test_empty_period_gives_zero_and_no_division_by_zero():
-    report = make_service(rows=[]).generate_report(OCT_START, OCT_END, id_admin=1)
-
-    assert report.total_amount == 0
-    assert report.tickets_sold == 0
-    assert report.average_ticket_price == 0.0
-
-
-def test_single_day_period_is_allowed():
-    day = date(2026, 10, 5)
-    report = make_service().generate_report(day, day, id_admin=1)
-    assert report.period_start == report.period_end == day
+def revenue_row(**overrides) -> dict:
+    """Ligne SQL telle que renvoyée par RealDictCursor (SUM -> Decimal, COUNT -> int)."""
+    row = {"id_movie": 2, "title": "Oppenheimer", "revenue": Decimal("44.40"), "tickets_sold": 4}
+    row.update(overrides)
+    return row
 
 
-def test_inverted_period_is_refused():
-    with pytest.raises(ValueError):
-        make_service().generate_report(OCT_END, OCT_START, id_admin=1)
+def occupancy_row(**overrides) -> dict:
+    row = {"id_movie": 1, "title": "Dune: Part Two", "screenings": 2,
+           "seats_offered": Decimal("200"), "seats_sold": Decimal("50")}
+    row.update(overrides)
+    return row
 
 
-def test_customer_cannot_see_accounting():
-    with pytest.raises(PermissionError):
-        make_service().generate_report(OCT_START, OCT_END, id_admin=2)
+# --- Conversions ---------------------------------------------------------------
+def test_to_movie_revenue_converts_decimal_to_float():
+    line = AccountingReportDao._to_movie_revenue(revenue_row())
+
+    assert isinstance(line, MovieRevenue)
+    assert (line.id_movie, line.title, line.tickets_sold) == (2, "Oppenheimer", 4)
+    assert line.revenue == 44.40
+    assert isinstance(line.revenue, float)
 
 
-def test_unknown_user_is_refused():
-    with pytest.raises(LookupError):
-        make_service().generate_report(OCT_START, OCT_END, id_admin=999)
+def test_to_movie_occupancy_converts_sums_to_int():
+    line = AccountingReportDao._to_movie_occupancy(occupancy_row())
+
+    assert isinstance(line, MovieOccupancy)
+    assert (line.id_movie, line.title, line.screenings) == (1, "Dune: Part Two", 2)
+    assert (line.seats_offered, line.seats_sold) == (200, 50)
+    assert isinstance(line.seats_sold, int)
+
+
+# --- find_movie_revenues ---------------------------------------------------------
+def test_find_movie_revenues_maps_rows(dao, sql_query):
+    sql_query.return_value = [revenue_row(), revenue_row(id_movie=1, title="Dune: Part Two",
+                                                         revenue=Decimal("36.00"))]
+
+    lines = dao.find_movie_revenues(OCT_START, OCT_END)
+
+    assert [m.title for m in lines] == ["Oppenheimer", "Dune: Part Two"]
+    assert sql_query.call_args.kwargs["return_type"] == "all"
+
+
+def test_find_movie_revenues_end_date_is_inclusive(dao, sql_query):
+    """La borne de fin est incluse : on envoie "< 1er novembre" pour garder le 31 octobre à 23h30."""
+    sql_query.return_value = []
+
+    dao.find_movie_revenues(OCT_START, OCT_END)
+
+    assert sql_query.call_args.kwargs["data"] == {"start": OCT_START, "end_exclusive": date(2026, 11, 1)}
+
+
+def test_find_movie_revenues_counts_only_confirmed_bookings(dao, sql_query):
+    """Les réservations annulées ne doivent pas compter dans les recettes."""
+    sql_query.return_value = []
+
+    dao.find_movie_revenues(OCT_START, OCT_END)
+
+    assert "b.status = 'confirmed'" in sql_query.call_args.args[0]
+
+
+def test_find_movie_revenues_uses_booking_date(dao, sql_query):
+    """Décision de l'équipe : les recettes sont comptées à la date de réservation."""
+    sql_query.return_value = []
+
+    dao.find_movie_revenues(OCT_START, OCT_END)
+
+    assert "b.booking_date" in sql_query.call_args.args[0]
+
+
+@pytest.mark.parametrize("empty", [[], None])
+def test_find_movie_revenues_no_sale(dao, sql_query, empty):
+    sql_query.return_value = empty
+
+    assert dao.find_movie_revenues(OCT_START, OCT_END) == []
+
+
+def test_find_movie_revenues_reraises_database_error(dao, sql_query):
+    sql_query.side_effect = Exception("db down")
+
+    with pytest.raises(Exception, match="db down"):
+        dao.find_movie_revenues(OCT_START, OCT_END)
+
+
+# --- find_movie_occupancy --------------------------------------------------------
+def test_find_movie_occupancy_maps_rows(dao, sql_query):
+    sql_query.return_value = [occupancy_row(), occupancy_row(id_movie=2, title="Oppenheimer", screenings=1)]
+
+    lines = dao.find_movie_occupancy(OCT_START, OCT_END)
+
+    assert [o.title for o in lines] == ["Dune: Part Two", "Oppenheimer"]
+    assert lines[0].occupancy_rate == 25.0
+
+
+def test_find_movie_occupancy_end_date_is_inclusive(dao, sql_query):
+    sql_query.return_value = []
+
+    dao.find_movie_occupancy(OCT_START, OCT_END)
+
+    assert sql_query.call_args.kwargs["data"] == {"start": OCT_START, "end_exclusive": date(2026, 11, 1)}
+
+
+def test_find_movie_occupancy_ignores_future_screenings(dao, sql_query):
+    """Le taux de remplissage n'a de sens qu'une fois la séance commencée."""
+    sql_query.return_value = []
+
+    dao.find_movie_occupancy(OCT_START, OCT_END)
+
+    assert "LOCALTIMESTAMP" in sql_query.call_args.args[0]
+
+
+@pytest.mark.parametrize("empty", [[], None])
+def test_find_movie_occupancy_no_screening(dao, sql_query, empty):
+    sql_query.return_value = empty
+
+    assert dao.find_movie_occupancy(OCT_START, OCT_END) == []
+
+
+def test_find_movie_occupancy_reraises_database_error(dao, sql_query):
+    sql_query.side_effect = Exception("db down")
+
+    with pytest.raises(Exception, match="db down"):
+        dao.find_movie_occupancy(OCT_START, OCT_END)

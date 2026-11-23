@@ -144,13 +144,6 @@ async def create_user(user_data: UserCreateModel):
         if not t.has_schedule_condition and t.is_eligible(age, created_user.is_ensai_student, False)
     ]
 
-    if age <= 13:
-        eligible_tariffs.append("Under 14 (6€)")
-    if age >= 65:
-        eligible_tariffs.append("Over 65 (9.5€)")
-    if created_user.is_ensai_student:
-        eligible_tariffs.append("ENSAI Student (7.8€)")
-
     message = "Registration successful. "
     if created_user.is_ensai_student:
         message += "Your student ID will be checked at the ticket office. "

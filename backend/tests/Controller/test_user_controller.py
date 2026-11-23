@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, time
 from unittest.mock import patch
 
 import pytest
@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from backend.src.Controller.UserController import user_router
 from backend.src.Model.Administrator import Administrator
 from backend.src.Model.Customer import Customer
+from backend.src.Model.Tariff import Tariff
 from backend.src.Service.JWTService import JwtService
 
 app = FastAPI()
@@ -36,6 +37,24 @@ def make_customer(**overrides) -> Customer:
                 password="hash", date_of_birth=date(2004, 3, 1), is_ensai_student=False, salt="sel")
     data.update(overrides)
     return Customer(**data)
+
+
+# Fausse grille tarifaire : le message d'inscription liste les tarifs auxquels le client a droit
+FAKE_GRID = [
+    Tariff("ensai", "ENSAI Student", 7.8, requires_ensai=True),
+    Tariff("child", "Under 14", 6.0, max_age=13),
+    Tariff("senior", "Over 65", 9.5, min_age=65),
+    Tariff("wed", "Wednesday afternoon", 6.5, weekday=2, time_from=time(12, 0), time_until=time(18, 0)),
+    Tariff("full", "Full price", 11.0),
+]
+
+
+@pytest.fixture(autouse=True)
+def tariff_service():
+    """Remplace le TariffService du contrôleur (sinon l'inscription irait lire la vraie base)."""
+    with patch("backend.src.Controller.UserController.tariff_service") as mock_tariff_service:
+        mock_tariff_service.find_all.return_value = FAKE_GRID
+        yield mock_tariff_service
 
 
 def make_admin() -> Administrator:
@@ -195,6 +214,36 @@ def test_signup_ensai_student_message(mock_service):
     message = client.post(f"{BASE_URL}/", json={**signup_data, "email": "louise@ensai.fr"}).json()["message"]
     assert "ENSAI Student" in message
     assert "Your student ID will be checked at the ticket office." in message
+
+
+@patch(SERVICE)
+def test_signup_each_tariff_is_listed_once(mock_service):
+    """Un enfant ne doit pas voir "Under 14" deux fois dans le message."""
+    mock_service.create_user.return_value = make_customer(date_of_birth=years_ago(10))
+    message = client.post(f"{BASE_URL}/", json=signup_data).json()["message"]
+    assert message.count("Under 14") == 1
+
+
+@patch(SERVICE)
+def test_signup_prices_come_from_the_grid(mock_service, tariff_service):
+    """Si un admin change un prix, le message d'inscription affiche le nouveau prix."""
+    tariff_service.find_all.return_value = [Tariff("child", "Under 14", 5.0, max_age=13),
+                                            Tariff("full", "Full price", 11.0)]
+    mock_service.create_user.return_value = make_customer(date_of_birth=years_ago(10))
+
+    message = client.post(f"{BASE_URL}/", json=signup_data).json()["message"]
+
+    assert "Under 14 (5.00€)" in message
+    assert "6€" not in message
+    tariff_service.find_all.assert_called_once_with(only_active=True)
+
+
+@patch(SERVICE)
+def test_signup_schedule_tariffs_are_not_listed(mock_service):
+    """Les tarifs liés à un horaire (ex. mercredi après-midi) dépendent de la séance, pas du client."""
+    mock_service.create_user.return_value = make_customer(date_of_birth=years_ago(30))
+    message = client.post(f"{BASE_URL}/", json=signup_data).json()["message"]
+    assert "Wednesday afternoon" not in message
 
 
 def test_signup_age_birthday_not_yet_passed():

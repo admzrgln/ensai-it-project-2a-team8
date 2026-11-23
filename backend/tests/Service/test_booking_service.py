@@ -10,12 +10,12 @@ from backend.src.Model.Tariff import Tariff
 from backend.src.Model.Ticket import Ticket
 from backend.src.Service.BookingService import BookingError, BookingService, NotEnoughSeatsError
 
-BASE_PRICE = 9.0
+FULL_PRICE = 9.0
 
 
 def make_screening(**overrides) -> Screening:
     data = dict(id_screening=1, id_room=1, id_movie=1, id_admin=1,
-                date_time=datetime.now() + timedelta(days=7), base_price=BASE_PRICE, available_seats=50)
+                date_time=datetime.now() + timedelta(days=7), available_seats=50)
     data.update(overrides)
     return Screening(**data)
 
@@ -40,6 +40,7 @@ def service():
     s.booking_dao = MagicMock()
     s.screening_dao = MagicMock()
     s.user_dao = MagicMock()
+    s.price_revision_service = MagicMock()  # sinon apply_due_revisions() irait lire la base
     s.user_dao.find_by_id.return_value = make_customer()
     s.screening_dao.find_by_id.return_value = make_screening()
     s.booking_dao.insert_booking.return_value = True
@@ -48,7 +49,7 @@ def service():
         Tariff("child", "Moins de 14 ans", 4.50, max_age=13),
         Tariff("ensai", "Élève ENSAI", 4.00, requires_ensai=True),
         Tariff("student", "Étudiant·e", 6.00, requires_student=True),
-        Tariff("full", "Plein tarif", None),
+        Tariff("full", "Plein tarif", FULL_PRICE),
     ]
     return s
 
@@ -192,13 +193,38 @@ def test_cancel_started_screening_refused(service):
     service.booking_dao.cancel_booking.assert_not_called()
 
 
-def test_list_tariffs_uses_screening_base_price(service):
-    tariffs = service.list_tariffs(1)
-    assert {"code": "full", "label": "Plein tarif", "price": BASE_PRICE} in tariffs
-    assert {"code": "student", "label": "Étudiant·e", "price": 6.0} in tariffs
+def test_prices_come_from_the_grid(service):
+    """Adulte = plein tarif, enfant = tarif enfant, et le total est la somme des billets."""
+    booking = service.quote(10, 1, include_myself=False, customer_is_student=False,
+                            guests=[guest(), guest(date_of_birth=date(2018, 1, 1))])
+    assert [t.price for t in booking.tickets] == [FULL_PRICE, 4.50]
+    assert booking.total_price == FULL_PRICE + 4.50
 
 
-def test_list_tariffs_unknown_screening(service):
-    service.screening_dao.find_by_id.return_value = None
-    with pytest.raises(BookingError, match="Screening not found"):
-        service.list_tariffs(999)
+def test_due_price_revisions_are_applied_before_pricing(service):
+    """La révision annuelle des prix doit être appliquée avant de calculer le prix des billets."""
+    service.book(10, 1, True, False, [])
+    service.price_revision_service.apply_due_revisions.assert_called_once()
+
+
+def test_grid_without_full_tariff_gives_booking_error(service):
+    """Une TariffError (grille incomplète) est renvoyée au client comme BookingError."""
+    service.tariff_service.tariff_dao.find_all.return_value = [
+        Tariff("child", "Moins de 14 ans", 4.50, max_age=13),
+    ]
+    with pytest.raises(BookingError, match="'full' tariff is missing"):
+        service.book(10, 1, True, False, [])
+    service.booking_dao.insert_booking.assert_not_called()
+
+
+def test_exactly_enough_seats_is_accepted(service):
+    """Valeur limite : 2 billets pour 2 places restantes."""
+    service.screening_dao.find_by_id.return_value = make_screening(available_seats=2)
+    booking = service.book(10, 1, True, False, [guest()])
+    assert booking.seat_count == 2
+
+
+def test_cancel_unknown_booking_refused(service):
+    service.booking_dao.find_by_id.return_value = None
+    with pytest.raises(BookingError, match="Booking not found"):
+        service.cancel(999, id_customer=10)

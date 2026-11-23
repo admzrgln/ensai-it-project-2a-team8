@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -22,6 +22,7 @@ def service():
     s.room_dao = MagicMock()
     s.movie_dao = MagicMock()
     s.user_dao = MagicMock()
+    s.booking_dao = MagicMock()
 
     s.room_dao.find_by_id.return_value = MagicMock(capacity=ROOM_CAPACITY)
     s.movie_dao.find_by_id.return_value = MagicMock(duration=MOVIE_DURATION)
@@ -29,6 +30,8 @@ def service():
     s.screening_dao.find_overlapping.return_value = []
     s.screening_dao.insert_screening.return_value = True
     s.screening_dao.update_screening.return_value = True
+    s.screening_dao.find_by_id.return_value = MagicMock()  # la séance à modifier existe
+    s.booking_dao.count_booked_seats.return_value = 0
     return s
 
 
@@ -38,8 +41,6 @@ def make_screening(**overrides) -> Screening:
         id_movie=1,
         id_admin=1,
         date_time=datetime.now() + timedelta(days=7),
-        base_price=8.5,
-        available_seats=100,
         id_screening=None,
     )
     data.update(overrides)
@@ -90,29 +91,32 @@ def test_create_screening_dao_failure(service):
         service.create_screening(make_screening())
 
 
-@pytest.mark.parametrize(
-    "overrides",
-    [
-        pytest.param({"base_price": 0}, id="prix-zero"),
-        pytest.param({"available_seats": 0}, id="zero-place"),
-        pytest.param({"available_seats": ROOM_CAPACITY}, id="salle-pleine"),
-    ],
-)
-def test_create_screening_boundary_values_are_valid(service, overrides):
-    """Valeurs limites acceptées par les règles métier."""
-    assert service.create_screening(make_screening(**overrides)) is True
+def test_create_sets_available_seats_to_room_capacity(service):
+    """available_seats n'est pas choisi par l'admin : à la création, toute la salle est libre."""
+    screening = make_screening()
+
+    service.create_screening(screening)
+
+    assert screening.available_seats == ROOM_CAPACITY
 
 
-def test_create_refused_negative_price(service):
-    with pytest.raises(ScreeningError, match="price can't be negative"):
-        service.create_screening(make_screening(base_price=-1))
-    service.screening_dao.insert_screening.assert_not_called()
+def test_create_ignores_available_seats_sent_by_admin(service):
+    screening = make_screening(available_seats=3)
+
+    service.create_screening(screening)
+
+    assert screening.available_seats == ROOM_CAPACITY
 
 
-def test_create_refused_negative_available_seats(service):
-    with pytest.raises(ScreeningError, match="available seats can't be negative"):
-        service.create_screening(make_screening(available_seats=-1))
-    service.screening_dao.insert_screening.assert_not_called()
+def test_create_converts_timezone_aware_date_to_server_time(service):
+    """Une date envoyée avec fuseau ("...Z") est stockée sans fuseau, en heure du serveur."""
+    aware = (datetime.now() + timedelta(days=7)).astimezone(timezone.utc)
+    screening = make_screening(date_time=aware)
+
+    service.create_screening(screening)
+
+    assert screening.date_time.tzinfo is None
+    assert screening.date_time == aware.astimezone().replace(tzinfo=None)
 
 
 def test_create_refused_date_in_the_past(service):
@@ -128,14 +132,6 @@ def test_create_refused_unknown_room(service):
 
     with pytest.raises(ScreeningError, match="Room 1 not found"):
         service.create_screening(make_screening())
-    service.screening_dao.insert_screening.assert_not_called()
-
-
-def test_create_refused_room_too_small(service):
-    screening = make_screening(available_seats=ROOM_CAPACITY + 1)
-
-    with pytest.raises(ScreeningError, match=f"Room 1 has only {ROOM_CAPACITY} seats"):
-        service.create_screening(screening)
     service.screening_dao.insert_screening.assert_not_called()
 
 
@@ -209,9 +205,9 @@ def test_update_screening_without_id_is_refused(service):
 
 
 def test_update_screening_invalid_data_is_refused(service):
-    screening = make_screening(id_screening=3, base_price=-5)
+    screening = make_screening(id_screening=3, date_time=datetime.now() - timedelta(days=1))
 
-    with pytest.raises(ScreeningError, match="price can't be negative"):
+    with pytest.raises(ScreeningError, match="must be in the future"):
         service.update_screening(screening)
     service.screening_dao.update_screening.assert_not_called()
 
@@ -243,6 +239,43 @@ def test_update_refused_when_overlapping_another_screening(service):
     service.screening_dao.find_overlapping.return_value = [make_screening(id_screening=99)]
 
     with pytest.raises(ScreeningError, match="already used at this time"):
+        service.update_screening(make_screening(id_screening=3))
+    service.screening_dao.update_screening.assert_not_called()
+
+
+def test_update_screening_not_found(service):
+    service.screening_dao.find_by_id.return_value = None
+
+    with pytest.raises(ScreeningNotFoundError, match="Screening 999 not found"):
+        service.update_screening(make_screening(id_screening=999))
+    service.screening_dao.update_screening.assert_not_called()
+
+
+def test_update_keeps_seats_already_booked(service):
+    """Places libres = capacité de la salle - places déjà réservées."""
+    service.booking_dao.count_booked_seats.return_value = 50
+    screening = make_screening(id_screening=3)
+
+    service.update_screening(screening)
+
+    assert screening.available_seats == ROOM_CAPACITY - 50
+    service.booking_dao.count_booked_seats.assert_called_once_with(3)
+
+
+def test_update_all_seats_booked_gives_zero_available(service):
+    service.booking_dao.count_booked_seats.return_value = ROOM_CAPACITY
+    screening = make_screening(id_screening=3)
+
+    service.update_screening(screening)
+
+    assert screening.available_seats == 0
+
+
+def test_update_refused_new_room_smaller_than_booked_seats(service):
+    """On ne peut pas déplacer une séance dans une salle trop petite pour les réservations existantes."""
+    service.booking_dao.count_booked_seats.return_value = ROOM_CAPACITY + 1
+
+    with pytest.raises(ScreeningError, match=f"Room 1 has only {ROOM_CAPACITY} seats"):
         service.update_screening(make_screening(id_screening=3))
     service.screening_dao.update_screening.assert_not_called()
 
