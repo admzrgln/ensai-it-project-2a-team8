@@ -54,26 +54,6 @@ def test_admin_cannot_book(mock_service):
     mock_service.book.assert_not_called()
 
 
-# --- GET /bookings/tariffs/{id_screening} -----------------------------------------
-@patch(SERVICE)
-def test_tariffs_for_screening_is_public(mock_service):
-    mock_service.list_tariffs.return_value = [{"code": "full", "label": "Plein tarif", "price": 9.0}]
-
-    response = client.get(f"{BASE_URL}/tariffs/1")
-
-    assert response.status_code == 200
-    assert response.json()[0]["code"] == "full"
-    mock_service.list_tariffs.assert_called_once_with(1)
-
-
-@patch(SERVICE)
-def test_tariffs_for_unknown_screening(mock_service):
-    mock_service.list_tariffs.side_effect = BookingError("Screening not found")
-    response = client.get(f"{BASE_URL}/tariffs/999")
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Screening not found"
-
-
 # --- POST /bookings/quote ---------------------------------------------------------
 @patch(SERVICE)
 def test_quote_returns_total_without_booking(mock_service):

@@ -176,7 +176,7 @@ def test_create_movie_failure(mock_service):
 def test_search_omdb(mock_service):
     mock_service.search_omdb.return_value = [{"imdb_id": "tt1375666", "title": "Inception"}]
 
-    response = client.get(f"{BASE_URL}/omdb/search/Inception")
+    response = client.get(f"{BASE_URL}/omdb/search/Inception", headers=ADMIN)
 
     assert response.status_code == 200
     assert response.json()[0]["imdb_id"] == "tt1375666"
@@ -187,7 +187,7 @@ def test_search_omdb(mock_service):
 def test_search_omdb_service_error(mock_service):
     mock_service.search_omdb.side_effect = OmdbError("timeout")
 
-    response = client.get(f"{BASE_URL}/omdb/search/Inception")
+    response = client.get(f"{BASE_URL}/omdb/search/Inception", headers=ADMIN)
 
     assert response.status_code == 502
     assert response.json()["detail"] == "OMDb service error"
@@ -198,7 +198,7 @@ def test_search_omdb_service_error(mock_service):
 def test_import_from_omdb(mock_service):
     mock_service.import_from_omdb.return_value = {"id_movie": 1, **movie_data}
 
-    response = client.post(f"{BASE_URL}/omdb/import/tt1375666")
+    response = client.post(f"{BASE_URL}/omdb/import/tt1375666", headers=ADMIN)
 
     assert response.status_code == 201
     assert response.json()["title"] == "Inception"
@@ -208,7 +208,7 @@ def test_import_from_omdb(mock_service):
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_import_from_omdb_not_found(mock_service):
     mock_service.import_from_omdb.side_effect = LookupError("not found")
-    response = client.post(f"{BASE_URL}/omdb/import/tt0000000")
+    response = client.post(f"{BASE_URL}/omdb/import/tt0000000", headers=ADMIN)
     assert response.status_code == 404
     assert response.json()["detail"] == "Movie not found on OMDb"
 
@@ -216,14 +216,14 @@ def test_import_from_omdb_not_found(mock_service):
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_import_from_omdb_service_error(mock_service):
     mock_service.import_from_omdb.side_effect = OmdbError("timeout")
-    response = client.post(f"{BASE_URL}/omdb/import/tt1375666")
+    response = client.post(f"{BASE_URL}/omdb/import/tt1375666", headers=ADMIN)
     assert response.status_code == 502
 
 
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_import_from_omdb_failure(mock_service):
     mock_service.import_from_omdb.side_effect = RuntimeError("insert failed")
-    response = client.post(f"{BASE_URL}/omdb/import/tt1375666")
+    response = client.post(f"{BASE_URL}/omdb/import/tt1375666", headers=ADMIN)
     assert response.status_code == 400
     assert response.json()["detail"] == "Import failed"
 
@@ -254,3 +254,28 @@ def test_customer_cannot_update_movie(mock_service):
 def test_customer_cannot_delete_movie(mock_service):
     assert client.delete(f"{BASE_URL}/1", headers=CUSTOMER).status_code == 403
     mock_service.delete_movie.assert_not_called()
+
+
+# 15. Les routes OMDb sont réservées aux administrateurs
+@patch("backend.src.Controller.MovieController.movie_service")
+def test_customer_cannot_search_omdb(mock_service):
+    response = client.get(f"{BASE_URL}/omdb/search/Inception", headers=CUSTOMER)
+
+    assert response.status_code == 403
+    mock_service.search_omdb.assert_not_called()
+
+
+@patch("backend.src.Controller.MovieController.movie_service")
+def test_customer_cannot_import_from_omdb(mock_service):
+    response = client.post(f"{BASE_URL}/omdb/import/tt1375666", headers=CUSTOMER)
+
+    assert response.status_code == 403
+    mock_service.import_from_omdb.assert_not_called()
+
+
+@patch("backend.src.Controller.MovieController.movie_service")
+def test_import_from_omdb_without_token_is_refused(mock_service):
+    response = client.post(f"{BASE_URL}/omdb/import/tt1375666")
+
+    assert response.status_code in (401, 403)
+    mock_service.import_from_omdb.assert_not_called()

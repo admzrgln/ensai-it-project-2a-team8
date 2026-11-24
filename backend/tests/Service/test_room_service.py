@@ -15,16 +15,13 @@ def service():
 
 
 def make_room(**overrides) -> Room:
-    data = dict(room_type="IMAX", number="1", capacity=130, id_room=1)
+    data = dict(number="1", capacity=130, id_room=1)
     data.update(overrides)
     return Room(**data)
 
 
 # Cas invalides communs à la création et à la modification
 INVALID_ROOMS = [
-    pytest.param({"room_type": ""}, id="type-vide"),
-    pytest.param({"room_type": "   "}, id="type-espaces"),
-    pytest.param({"room_type": None}, id="type-none"),
     pytest.param({"number": ""}, id="numero-vide"),
     pytest.param({"number": "   "}, id="numero-espaces"),
     pytest.param({"number": None}, id="numero-none"),
@@ -53,23 +50,6 @@ def test_find_by_id_not_found(service):
     service.room_dao.find_by_id.return_value = None
 
     assert service.find_by_id(999) is None
-
-
-def test_find_by_type_adds_wildcards(service):
-    """Le service entoure le type de % pour une recherche partielle (ILIKE côté DAO)."""
-    rooms = [make_room()]
-    service.room_dao.find_by_type.return_value = rooms
-
-    result = service.find_by_type("IMA")
-
-    assert result == rooms
-    service.room_dao.find_by_type.assert_called_once_with("%IMA%")
-
-
-def test_find_by_type_no_result(service):
-    service.room_dao.find_by_type.return_value = []
-
-    assert service.find_by_type("inconnu") == []
 
 
 def test_create_room_success(service):

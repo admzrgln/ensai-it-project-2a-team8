@@ -51,13 +51,13 @@ class MovieService:
         """Validate and update an existing movie"""
         if movie.id_movie is None:
             return False
-    
+
         return self.movie_dao.update_movie(movie)
 
     @log
     def delete_movie(self, id_movie: int) -> bool:
         """Validate and delete a movie by its id"""
-        return self.movie_dao.movie_delete(id_movie) 
+        return self.movie_dao.movie_delete(id_movie)
 
     @log
     def search_omdb(self, title: str) -> list[dict]:

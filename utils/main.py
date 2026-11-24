@@ -1,8 +1,9 @@
 from dotenv import load_dotenv
-from backend.src.Model.Movie import Movie
-from backend.src.DAO.MovieDAO import MovieDao
 
-load_dotenv() 
+from backend.src.DAO.MovieDAO import MovieDao
+from backend.src.Model.Movie import Movie
+
+load_dotenv()
 
 def main():
     print("🎬 --- Démarrage du Sandbox Movie --- 🎬")
@@ -15,7 +16,7 @@ def main():
         external_id="tt1375666",
         poster_url="https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@.jpg"
     )
-    
+
     # 2. On utilise le DAO pour l'insérer
     movie_dao = MovieDao()
     creation_reussie = movie_dao.create(nouveau_film)
@@ -23,7 +24,7 @@ def main():
     # 3. On vérifie si ça a bien fonctionné
     if creation_reussie:
         print(f"✅ Film sauvegardé avec l'ID : {nouveau_film.id}")
-        
+
         # 4. On relit la base de données pour vérifier qu'on peut récupérer l'info
         film_depuis_db = movie_dao.find_by_id(nouveau_film.id)
         if film_depuis_db:

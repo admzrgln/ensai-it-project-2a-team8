@@ -3,9 +3,10 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from backend.src.Service.MovieService import MovieService
+
 from backend.src.Controller.JWTBearer import require_admin
 from backend.src.Model.Screening import Screening
+from backend.src.Service.MovieService import MovieService
 from backend.src.Service.ScreeningService import ScreeningError, ScreeningNotFoundError, ScreeningService
 
 screening_router = APIRouter(prefix="/screenings")

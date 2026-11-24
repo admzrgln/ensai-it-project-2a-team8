@@ -1,18 +1,37 @@
-import pytest
-from pydantic_core import ValidationError
-
-from src.Model.Movie import Movie
+from backend.src.Model.Movie import Movie
 
 
-def test_movie_constructor_ok():
-    the_shining = Movie(id=12, original_title="The Shining")
-    assert the_shining.id == 12
-    assert the_shining.original_title == "The Shining"
+def make_movie(**overrides) -> Movie:
+    data = dict(
+        title="Inception",
+        duration=148,
+        genre="Sci-Fi",
+        external_id="tt1375666",
+        poster_url="https://example.com/inception.jpg",
+    )
+    data.update(overrides)
+    return Movie(**data)
 
 
-def test_movie_constructor_throws_on_incorrect_input():
-    with pytest.raises(ValidationError) as exception_info:
-        Movie(id="Twelve", original_title="Dracula")
-    assert "id" in str(
-        exception_info.value
-    ) and "Input should be a valid integer, unable to parse string as an integer" in str(exception_info.value)
+def test_movie_constructor_stores_all_attributes():
+    movie = make_movie(id_movie=12)
+
+    assert movie.id_movie == 12
+    assert movie.title == "Inception"
+    assert movie.duration == 148
+    assert movie.genre == "Sci-Fi"
+    assert movie.external_id == "tt1375666"
+    assert movie.poster_url == "https://example.com/inception.jpg"
+
+
+def test_movie_id_is_none_before_insertion():
+    """Un film pas encore enregistré en base n'a pas d'identifiant."""
+    movie = make_movie()
+
+    assert movie.id_movie is None
+
+
+def test_movie_str():
+    movie = make_movie(id_movie=12)
+
+    assert str(movie) == "Movie 12 : Inception (148 min) [Sci-Fi]"

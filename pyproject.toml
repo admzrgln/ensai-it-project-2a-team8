@@ -1,9 +1,12 @@
 [project]
-name = "Projet2A_2026"
+name = "ensai-cinema-club"
 version = "0.1.0"
-description = "Teacher's version of the Projet2A 2024"
+description = "Ensai Cinema Club - backend for cinema ticketing and accounting (ENSAI 2A IT project, team 8)"
 authors = [
-    {name = "ClémentValot", email = "clement.valot.pro@gmail.com"},
+    {name = "Thomas Etienne"},
+    {name = "Louise Ferron"},
+    {name = "Adam Zarg-Layoun"},
+    {name = "Alexandre Zarpas"},
 ]
 dependencies = [
     "fastapi>=0.141.1",
@@ -27,7 +30,7 @@ distribution = false
 [tool.pdm.scripts]
 lint = "ruff check"
 format = "ruff format"
-test = "pytest tests --cov=src"
+test = "pytest --cov=backend/src --cov-report=term-missing"
 start = "pdm run __main__.py"
 typecheck = "pyrefly check"
 
@@ -38,7 +41,7 @@ line-length = 120
 select = ["E", "F", "W", "B", "I", "A", "C90", "PERF", "TCH", "TID"]
 
 [tool.pyrefly]
-project-includes = ["src/**/*"]
+project-includes = ["backend/src/**/*"]
 project-excludes = ['.venv/**/*']
 search_path = [
     "."
@@ -61,6 +64,6 @@ typing = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "-ra -q --ignore=backend/tests/DAO/test_UserRepo.py --ignore=backend/tests/Model/test_Movie.py --ignore=backend/tests/Service/test_JWTService.py --ignore=backend/tests/Service/test_PasswordService.py"
+addopts = "-ra -q"
 pythonpath = ["."]
 testpaths = ["backend/tests"]

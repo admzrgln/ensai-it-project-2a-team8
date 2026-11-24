@@ -9,7 +9,7 @@ from utils.log_utils import log
 # Sous Windows, ZoneInfo demande le paquet `tzdata` (pdm add tzdata).
 CINEMA_TZ = ZoneInfo("Europe/Paris")
 
-MAX_RATE_PERCENT = 10.0  
+MAX_RATE_PERCENT = 10.0
 
 
 class PriceRevisionError(Exception):

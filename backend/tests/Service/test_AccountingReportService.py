@@ -1,14 +1,3 @@
-"""Unit tests of AccountingReportService.
-
-The DAOs are replaced by fakes, so these tests run without PostgreSQL.
-The fake rows reproduce what fake_accounting_db.sql should return for
-October 2026, so the same expected numbers are checked here and in the database.
-
-What we test here is the business logic only:
-- the checks (valid period, user exists, user is an admin) and their ORDER
-- that the DAO is called with the right period, and only when the checks pass
-- that the report is built from what the DAO returns
-"""
 from datetime import date
 from unittest.mock import MagicMock
 
@@ -17,6 +6,7 @@ import pytest
 from backend.src.Model.AccountingReport import AccountingReport
 from backend.src.Model.Administrator import Administrator
 from backend.src.Model.Customer import Customer
+from backend.src.Model.MovieOccupancy import MovieOccupancy
 from backend.src.Model.MovieRevenue import MovieRevenue
 from backend.src.Service.AccountingReportService import AccountingReportService
 
@@ -39,7 +29,7 @@ class FakeUserDao:
 class FakeReportDao:
     """Returns the October 2026 per-movie figures of the fake database and records its calls."""
 
-    def __init__(self, rows=None):
+    def __init__(self, rows=None, occupancies=None):
         self.rows = (
             rows
             if rows is not None
@@ -48,15 +38,28 @@ class FakeReportDao:
                 MovieRevenue(id_movie=1, title="Dune: Part Two", revenue=36.00, tickets_sold=4),
             ]
         )
+        self.occupancies = (
+            occupancies
+            if occupancies is not None
+            else [
+                MovieOccupancy(id_movie=1, title="Dune: Part Two", screenings=2, seats_offered=200, seats_sold=50),
+                MovieOccupancy(id_movie=2, title="Oppenheimer", screenings=1, seats_offered=100, seats_sold=40),
+            ]
+        )
         self.calls = []
+        self.occupancy_calls = []
 
     def find_movie_revenues(self, period_start, period_end):
         self.calls.append((period_start, period_end))
         return self.rows
 
+    def find_movie_occupancy(self, period_start, period_end):
+        self.occupancy_calls.append((period_start, period_end))
+        return self.occupancies
 
-def make_service(rows=None) -> AccountingReportService:
-    return AccountingReportService(report_dao=FakeReportDao(rows), user_dao=FakeUserDao())
+
+def make_service(rows=None, occupancies=None) -> AccountingReportService:
+    return AccountingReportService(report_dao=FakeReportDao(rows, occupancies), user_dao=FakeUserDao())
 
 
 def test_report_totals_match_fake_database():
@@ -83,6 +86,24 @@ def test_period_is_passed_to_dao_once():
     service.generate_report(OCT_START, OCT_END, id_admin=ADMIN_ID)
 
     assert service.report_dao.calls == [(OCT_START, OCT_END)]
+    assert service.report_dao.occupancy_calls == [(OCT_START, OCT_END)]
+
+
+def test_report_includes_occupancy():
+    """Taux global pondéré par les places : (50 + 40) / (200 + 100) = 30 %, pas la moyenne de 25 % et 40 %."""
+    report = make_service().generate_report(OCT_START, OCT_END, id_admin=ADMIN_ID)
+
+    assert [o.title for o in report.movie_occupancies] == ["Dune: Part Two", "Oppenheimer"]
+    assert report.seats_offered == 300
+    assert report.seats_sold == 90
+    assert report.occupancy_rate == 30.0
+
+
+def test_no_screening_gives_zero_occupancy():
+    report = make_service(occupancies=[]).generate_report(OCT_START, OCT_END, id_admin=ADMIN_ID)
+
+    assert report.movie_occupancies == []
+    assert report.occupancy_rate == 0.0
 
 
 def test_empty_period_gives_zero_and_no_division_by_zero():
@@ -132,6 +153,7 @@ def test_no_sql_query_when_the_request_is_refused(start, end, id_admin):
         service.generate_report(start, end, id_admin=id_admin)
 
     assert service.report_dao.calls == []
+    assert service.report_dao.occupancy_calls == []
 
 
 def test_period_is_checked_before_the_user():

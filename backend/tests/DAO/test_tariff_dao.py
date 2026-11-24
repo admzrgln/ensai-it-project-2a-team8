@@ -1,3 +1,4 @@
+from datetime import time
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -34,9 +35,15 @@ def test_to_tariff_maps_columns_and_converts_decimal_to_float():
     assert t.requires_ensai is False and t.requires_student is False and t.is_active is True
 
 
-def test_to_tariff_keeps_null_price():
-    """price NULL en base = prix de base de la séance : doit rester None, pas 0."""
-    assert TariffDao._to_tariff(tariff_row(code="full", price=None)).price is None
+def test_to_tariff_without_schedule_columns():
+    """Lignes sans colonnes weekday/time_from/time_until : pas de condition d'horaire."""
+    t = TariffDao._to_tariff(tariff_row())
+    assert t.weekday is None and t.time_from is None and t.time_until is None
+
+
+def test_to_tariff_maps_schedule_columns():
+    t = TariffDao._to_tariff(tariff_row(code="wed", weekday=2, time_from=time(12, 0), time_until=time(18, 0)))
+    assert (t.weekday, t.time_from, t.time_until) == (2, time(12, 0), time(18, 0))
 
 
 def test_to_data_contains_all_columns():
@@ -44,12 +51,13 @@ def test_to_data_contains_all_columns():
     assert TariffDao._to_data(t) == {
         "code": "senior", "label": "65 ans et +", "price": 5.0, "min_age": 65, "max_age": None,
         "requires_ensai": False, "requires_student": False, "is_active": True,
+        "weekday": None, "time_from": None, "time_until": None,
     }
 
 
 # --- GET ---------------------------------------------------------------------
 def test_find_all_active_only_by_default(dao, sql_query):
-    sql_query.return_value = [tariff_row(), tariff_row(code="full", label="Plein tarif", price=None, max_age=None)]
+    sql_query.return_value = [tariff_row(), tariff_row(code="full", label="Plein tarif", price=Decimal("9.00"), max_age=None)]
 
     tariffs = dao.find_all()
 

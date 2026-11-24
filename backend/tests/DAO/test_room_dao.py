@@ -19,23 +19,22 @@ def dao():
 
 
 def room_row(**overrides) -> dict:
-    """Ligne SQL telle que renvoyée par RealDictCursor (colonne 'type', pas 'room_type')."""
-    row = {"id_room": 1, "type": "IMAX", "number": "1", "capacity": 130}
+    """Ligne SQL telle que renvoyée par RealDictCursor."""
+    row = {"id_room": 1, "number": "1", "capacity": 130}
     row.update(overrides)
     return row
 
 
 def make_room(**overrides) -> Room:
-    data = dict(room_type="IMAX", number="1", capacity=130, id_room=None)
+    data = dict(number="1", capacity=130, id_room=None)
     data.update(overrides)
     return Room(**data)
 
 
 def test_to_room_maps_sql_columns_to_attributes():
-    room = RoomDao._to_room(room_row(id_room=4, type="3D", number="B2", capacity=80))
+    room = RoomDao._to_room(room_row(id_room=4, number="B2", capacity=80))
 
     assert room.id_room == 4
-    assert room.room_type == "3D"  # colonne SQL "type" -> attribut room_type
     assert room.number == "B2"
     assert room.capacity == 80
 
@@ -88,38 +87,13 @@ def test_find_by_id_reraises_database_error(dao, sql_query):
         dao.find_by_id(1)
 
 
-def test_find_by_type_maps_rows_to_rooms(dao, sql_query):
-    sql_query.return_value = [room_row(id_room=1), room_row(id_room=5, number="5")]
-
-    rooms = dao.find_by_type("%IMAX%")
-
-    assert [r.id_room for r in rooms] == [1, 5]
-    assert sql_query.call_args.kwargs["data"] == {"type": "%IMAX%"}
-    assert sql_query.call_args.kwargs["return_type"] == "all"
-    assert "ILIKE" in sql_query.call_args.args[0]
-
-
-@pytest.mark.parametrize("empty", [[], None])
-def test_find_by_type_no_result(dao, sql_query, empty):
-    sql_query.return_value = empty
-
-    assert dao.find_by_type("%zzz%") == []
-
-
-def test_find_by_type_reraises_database_error(dao, sql_query):
-    sql_query.side_effect = Exception("db down")
-
-    with pytest.raises(Exception, match="db down"):
-        dao.find_by_type("%x%")
-
-
 def test_insert_room_success_sets_generated_id(dao, sql_query):
     sql_query.return_value = {"id_room": 12}
     room = make_room()
 
     assert dao.insert_room(room) is True
     assert room.id_room == 12
-    assert sql_query.call_args.kwargs["data"] == {"type": "IMAX", "number": "1", "capacity": 130}
+    assert sql_query.call_args.kwargs["data"] == {"number": "1", "capacity": 130}
 
 
 def test_insert_room_no_row_returned(dao, sql_query):
@@ -145,7 +119,6 @@ def test_update_room_success(dao, sql_query):
     assert dao.update_room(room) is True
     assert sql_query.call_args.kwargs["data"] == {
         "id_room": 3,
-        "type": "IMAX",
         "number": "1",
         "capacity": 250,
     }

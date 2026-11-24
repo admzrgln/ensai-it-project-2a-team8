@@ -1,9 +1,11 @@
-from unittest.mock import patch
+from datetime import datetime
+from unittest.mock import MagicMock, patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.src.Controller.ScreeningController import screening_router
+from backend.src.Model.Screening import Screening
 from backend.src.Service.JWTService import JwtService
 from backend.src.Service.ScreeningService import ScreeningError, ScreeningNotFoundError
 
@@ -27,20 +29,43 @@ screening_data = {
 }
 
 
-# 1. GET /screenings/ : récupérer toutes les séances
+# 1. GET /screenings/ : récupérer toutes les séances (avec le titre du film)
+@patch("backend.src.Controller.ScreeningController.movie_service")
 @patch("backend.src.Controller.ScreeningController.screening_service")
-def test_find_all_screenings(mock_service):
-    mock_service.find_all.return_value = [screening_data]
+def test_find_all_screenings(mock_service, mock_movie_service):
+    mock_service.find_all.return_value = [
+        Screening(id_screening=1, id_room=1, id_movie=2, id_admin=3,
+                  date_time=datetime(2026, 12, 15, 20, 30), available_seats=120)
+    ]
+    mock_movie_service.find_by_id.return_value = MagicMock(title="Dune")
 
     response = client.get(f"{BASE_URL}/")
 
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]["id_movie"] == 2
+    assert response.json()[0]["movie_title"] == "Dune"
     mock_service.find_all.assert_called_once()
+    mock_movie_service.find_by_id.assert_called_once_with(2)
 
 
-# 2. GET /screenings/movie/{id_movie} : chercher par film
+@patch("backend.src.Controller.ScreeningController.movie_service")
+@patch("backend.src.Controller.ScreeningController.screening_service")
+def test_find_all_screenings_unknown_movie(mock_service, mock_movie_service):
+    """Si le film a été supprimé, la séance est quand même listée."""
+    mock_service.find_all.return_value = [
+        Screening(id_screening=1, id_room=1, id_movie=99, id_admin=3,
+                  date_time=datetime(2026, 12, 15, 20, 30), available_seats=120)
+    ]
+    mock_movie_service.find_by_id.return_value = None
+
+    response = client.get(f"{BASE_URL}/")
+
+    assert response.status_code == 200
+    assert response.json()[0]["movie_title"] == "Film inconnu"
+
+
+# 2. GET /screenings/movie/{id_movie} : séances d'un film
 @patch("backend.src.Controller.ScreeningController.screening_service")
 def test_screenings_by_movie(mock_service):
     mock_service.find_by_movie.return_value = [screening_data]

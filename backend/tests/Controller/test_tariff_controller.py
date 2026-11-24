@@ -26,13 +26,13 @@ senior_data = {"code": "senior", "label": "65 ans et +", "price": 5.5, "min_age"
 @patch(SERVICE)
 def test_list_active_tariffs_is_public(mock_service):
     mock_service.find_all.return_value = [Tariff("child", "Moins de 14 ans", 4.5, max_age=13),
-                                          Tariff("full", "Plein tarif")]
+                                          Tariff("full", "Plein tarif", 9.0)]
 
     response = client.get(f"{BASE_URL}/")
 
     assert response.status_code == 200
     assert [t["code"] for t in response.json()] == ["child", "full"]
-    assert response.json()[1]["price"] is None
+    assert response.json()[1]["price"] == 9.0
     mock_service.find_all.assert_called_once_with(only_active=True)
 
 

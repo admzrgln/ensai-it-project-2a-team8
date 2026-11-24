@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
@@ -23,14 +22,13 @@ def dao():
 
 
 def screening_row(**overrides) -> dict:
-    """Ligne SQL telle que renvoyée par RealDictCursor (base_price est un Decimal avec psycopg2)."""
+    """Ligne SQL telle que renvoyée par RealDictCursor."""
     row = {
         "id_screening": 1,
         "id_room": 2,
         "id_movie": 3,
         "id_admin": 4,
         "date_time": SHOW_TIME,
-        "base_price": Decimal("8.50"),
         "available_seats": 100,
     }
     row.update(overrides)
@@ -43,7 +41,6 @@ def make_screening(**overrides) -> Screening:
         id_movie=3,
         id_admin=4,
         date_time=SHOW_TIME,
-        base_price=8.5,
         available_seats=100,
         id_screening=None,
     )
@@ -56,7 +53,7 @@ def sent_values(sql_query) -> list:
     return list(sql_query.call_args.kwargs["data"].values())
 
 
-def test_to_screening_maps_columns_and_converts_decimal_to_float():
+def test_to_screening_maps_columns():
     screening = ScreeningDao._to_screening(screening_row())
 
     assert screening.id_screening == 1
@@ -65,8 +62,6 @@ def test_to_screening_maps_columns_and_converts_decimal_to_float():
     assert screening.id_admin == 4
     assert screening.date_time == SHOW_TIME
     assert screening.available_seats == 100
-    assert screening.base_price == 8.5
-    assert isinstance(screening.base_price, float)  # Decimal -> float
 
 
 def test_find_all_maps_rows_to_screenings(dao, sql_query):
@@ -186,7 +181,7 @@ def test_insert_screening_success_sets_generated_id(dao, sql_query):
     assert screening.id_screening == 21
 
     values = sent_values(sql_query)
-    for expected in (2, 3, 4, SHOW_TIME, 8.5, 100):
+    for expected in (2, 3, 4, SHOW_TIME, 100):
         assert expected in values
 
 
@@ -212,12 +207,12 @@ def test_insert_screening_database_error_returns_false(dao, sql_query):
 # ---------------------------------------------------------------------------
 def test_update_screening_success(dao, sql_query):
     sql_query.return_value = {"id_screening": 7}
-    screening = make_screening(id_screening=7, base_price=9.0, available_seats=80)
+    screening = make_screening(id_screening=7, available_seats=80)
 
     assert dao.update_screening(screening) is True
 
     values = sent_values(sql_query)
-    for expected in (7, 9.0, 80):
+    for expected in (7, 80):
         assert expected in values
 
 

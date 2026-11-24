@@ -14,7 +14,7 @@ class TariffDao(metaclass=Singleton):
         return Tariff(
             code=row["code"],
             label=row["label"],
-            price=float(row["price"]), 
+            price=float(row["price"]),
             min_age=row["min_age"],
             max_age=row["max_age"],
             requires_ensai=row["requires_ensai"],
