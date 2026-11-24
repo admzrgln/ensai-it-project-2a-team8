@@ -10,8 +10,6 @@ class AccountingReportService:
     """Class containing AccountingReport service methods (Business Logic Layer)"""
 
     def __init__(self, report_dao=None, user_dao=None):
-        # DAOs can be injected: in unit tests we pass fake DAOs instead of
-        # the real ones, so the tests never touch PostgreSQL.
         self.report_dao = report_dao or AccountingReportDao()
         self.user_dao = user_dao or UserDao()
 

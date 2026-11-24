@@ -35,16 +35,15 @@ class AccountingReportDao(metaclass=Singleton):
 
     @log
     def find_movie_revenues(self, period_start: date, period_end: date) -> list[MovieRevenue]:
-        """Revenue and tickets sold per movie, for payments made in [period_start, period_end].
+         """Revenue and tickets sold per movie, for tickets SOLD in [period_start, period_end].
 
         Rules:
-        - only payments with status 'paid' count (failed / pending / refunded are ignored)
-        - a sale is counted on its PAYMENT date (cash accounting)
-        - period_end is inclusive: we compare with "< period_end + 1 day" because
-          payment_date is a TIMESTAMP (a payment on the last day at 23:30 must count)
-        - revenue is summed from booking_line (quantity * unit_price), NOT from
-          payment.amount: joining payment to several booking lines would repeat the
-          payment amount once per line and double-count it
+        - one row of `ticket` = one seat sold; ticket.price is the price actually paid
+          (it does not change if an admin modifies the price grid afterwards)
+        - only 'confirmed' bookings count (cancelled bookings are ignored)
+        - a sale is counted on the BOOKING date: that is when the cinema gets the money
+          (occupancy, on the contrary, is counted on the screening date: see find_movie_occupancy)
+        - period_end is inclusive: "< period_end + 1 day" because booking_date is a TIMESTAMP
         """
         query = """
             SELECT m.id_movie,

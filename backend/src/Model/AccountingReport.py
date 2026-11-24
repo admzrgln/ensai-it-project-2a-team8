@@ -27,8 +27,6 @@ class AccountingReport:
         self.period_end = period_end
         self.movie_revenues = movie_revenues
         self.movie_occupancies = movie_occupancies or []
-
-        # Computed values
         self.total_amount = sum(m.revenue for m in movie_revenues)
         self.tickets_sold = sum(m.tickets_sold for m in movie_revenues)
         if self.tickets_sold:
@@ -36,7 +34,6 @@ class AccountingReport:
         else:
             self.average_ticket_price = 0.0
 
-        # Global occupancy: weighted by seats (not the mean of the per-movie rates)
         self.seats_offered = sum(o.seats_offered for o in self.movie_occupancies)
         self.seats_sold = sum(o.seats_sold for o in self.movie_occupancies)
         if self.seats_offered:

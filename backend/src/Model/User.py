@@ -20,4 +20,4 @@ class User(ABC):
 
     def __str__(self):
         """Définit le comportement de l'objet lorsqu'il est passé à print()"""
-        return f"Movie {self.id_user} : {self.first_name} {self.last_name} {self.date_of_birth} {self.role} - {self.email}]"
+        return f"User {self.id_user} : {self.first_name} {self.last_name} {self.date_of_birth} {self.role} - {self.email}]"
