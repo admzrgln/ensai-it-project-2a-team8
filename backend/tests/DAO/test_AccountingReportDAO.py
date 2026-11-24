@@ -37,7 +37,6 @@ def occupancy_row(**overrides) -> dict:
     return row
 
 
-# --- Conversions ---------------------------------------------------------------
 def test_to_movie_revenue_converts_decimal_to_float():
     line = AccountingReportDao._to_movie_revenue(revenue_row())
 
@@ -56,7 +55,6 @@ def test_to_movie_occupancy_converts_sums_to_int():
     assert isinstance(line.seats_sold, int)
 
 
-# --- find_movie_revenues ---------------------------------------------------------
 def test_find_movie_revenues_maps_rows(dao, sql_query):
     sql_query.return_value = [revenue_row(), revenue_row(id_movie=1, title="Dune: Part Two",
                                                          revenue=Decimal("36.00"))]
@@ -68,12 +66,14 @@ def test_find_movie_revenues_maps_rows(dao, sql_query):
 
 
 def test_find_movie_revenues_end_date_is_inclusive(dao, sql_query):
-    """La borne de fin est incluse : on envoie "< 1er novembre" pour garder le 31 octobre à 23h30."""
+    """La borne de fin est incluse :
+     on envoie "< 1er novembre" pour garder le 31 octobre à 23h30."""
     sql_query.return_value = []
 
     dao.find_movie_revenues(OCT_START, OCT_END)
 
-    assert sql_query.call_args.kwargs["data"] == {"start": OCT_START, "end_exclusive": date(2026, 11, 1)}
+    assert sql_query.call_args.kwargs["data"] == {"start": OCT_START,
+                                                  "end_exclusive": date(2026, 11, 1)}
 
 
 def test_find_movie_revenues_counts_only_confirmed_bookings(dao, sql_query):
@@ -108,9 +108,9 @@ def test_find_movie_revenues_reraises_database_error(dao, sql_query):
         dao.find_movie_revenues(OCT_START, OCT_END)
 
 
-# --- find_movie_occupancy --------------------------------------------------------
 def test_find_movie_occupancy_maps_rows(dao, sql_query):
-    sql_query.return_value = [occupancy_row(), occupancy_row(id_movie=2, title="Oppenheimer", screenings=1)]
+    sql_query.return_value = [occupancy_row(),
+                              occupancy_row(id_movie=2, title="Oppenheimer", screenings=1)]
 
     lines = dao.find_movie_occupancy(OCT_START, OCT_END)
 
@@ -123,7 +123,8 @@ def test_find_movie_occupancy_end_date_is_inclusive(dao, sql_query):
 
     dao.find_movie_occupancy(OCT_START, OCT_END)
 
-    assert sql_query.call_args.kwargs["data"] == {"start": OCT_START, "end_exclusive": date(2026, 11, 1)}
+    assert sql_query.call_args.kwargs["data"] == {"start": OCT_START,
+                                                  "end_exclusive": date(2026, 11, 1)}
 
 
 def test_find_movie_occupancy_ignores_future_screenings(dao, sql_query):

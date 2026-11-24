@@ -8,7 +8,7 @@ def test_price_revision_constructor():
 
     assert revision.year == 2028
     assert revision.rate_percent == 2.5
-    assert revision.applied_at is None  # planifiée par défaut
+    assert revision.applied_at is None
 
 
 def test_price_revision_constructor_applied():

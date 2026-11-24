@@ -10,12 +10,10 @@ from backend.src.Service.PasswordService import (
     validate_username_password,
 )
 
-# Valeurs de référence : SHA-256 de "soleil1234" et de "jambon" + "soleil1234"
 HASH_NO_SALT = "a88c648411492422ee9a1f4b03d3f5b71705499786f4415a59b51b255611ba50"
 HASH_WITH_SALT = "56d25b0190eb6fcdab76f20550aa3e85a37ee48d520ac70385ae3615deb7d53a"
 
 
-# --- hash_password -------------------------------------------------------------------
 def test_hash_password():
     assert hash_password("soleil1234") == HASH_NO_SALT
 
@@ -32,18 +30,16 @@ def test_hash_password_is_deterministic():
     assert hash_password("soleil1234", "jambon") == hash_password("soleil1234", "jambon")
 
 
-# --- create_salt ---------------------------------------------------------------------
 def test_create_salt_length():
-    assert len(create_salt()) == 256  # 128 octets écrits en hexadécimal
+    assert len(create_salt()) == 256
 
 
 def test_create_salt_is_random():
     assert create_salt() != create_salt()
 
 
-# --- check_password_strength ---------------------------------------------------------
 def test_strong_enough_password():
-    check_password_strength("12345678")  # 8 caractères : accepté, aucune exception
+    check_password_strength("12345678")
 
 
 def test_password_too_short():
@@ -51,7 +47,6 @@ def test_password_too_short():
         check_password_strength("1234567")
 
 
-# --- validate_username_password ------------------------------------------------------
 @pytest.fixture
 def user_repo():
     janjak = Customer(4, "Jean", "Jacques", "janjak@mail.fr", HASH_WITH_SALT, None, salt="jambon")

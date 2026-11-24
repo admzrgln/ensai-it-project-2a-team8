@@ -34,14 +34,14 @@ def test_any_condition_makes_has_conditions_true(overrides):
     assert Tariff("x", "x", 5.0, **overrides).has_conditions is True
 
 
-# --- is_eligible ----------------------------------------------------------
 def test_tariff_without_condition_is_for_everyone():
     t = Tariff("full", "Plein tarif", 9.0)
     assert t.is_eligible(age=40, is_ensai_student=False, is_student=False)
     assert t.is_eligible(age=0, is_ensai_student=True, is_student=True)
 
 
-@pytest.mark.parametrize("age, expected", [(12, False), (13, True), (64, True), (65, True), (66, False)])
+@pytest.mark.parametrize("age, expected", [(12, False),
+                         (13, True), (64, True), (65, True), (66, False)])
 def test_age_bounds_are_inclusive(age, expected):
     t = Tariff("x", "13-65 ans", 5.0, min_age=13, max_age=65)
     assert t.is_eligible(age, False, False) is expected
@@ -62,32 +62,32 @@ def test_only_max_age():
 def test_requires_ensai():
     t = Tariff("ensai", "Élève ENSAI", 4.0, requires_ensai=True)
     assert t.is_eligible(20, is_ensai_student=True, is_student=False)
-    assert not t.is_eligible(20, is_ensai_student=False, is_student=True)  # étudiant ailleurs : non
+    assert not t.is_eligible(20, is_ensai_student=False, is_student=True)
 
 
 def test_requires_student_accepts_ensai_students():
     t = Tariff("student", "Étudiant·e", 6.0, requires_student=True)
     assert t.is_eligible(20, is_ensai_student=False, is_student=True)
-    assert t.is_eligible(20, is_ensai_student=True, is_student=False)  # ENSAI = étudiant·e
+    assert t.is_eligible(20, is_ensai_student=True, is_student=False)
     assert not t.is_eligible(20, is_ensai_student=False, is_student=False)
 
 
 def test_all_conditions_must_be_met():
-    t = Tariff("young_student", "Étudiant·e de moins de 26 ans", 5.0, max_age=25, requires_student=True)
+    t = Tariff("young_student", "Étudiant·e de moins de 26 ans",
+               5.0, max_age=25, requires_student=True)
     assert t.is_eligible(22, False, True)
-    assert not t.is_eligible(30, False, True)  # trop âgé·e
-    assert not t.is_eligible(22, False, False)  # pas étudiant·e
+    assert not t.is_eligible(30, False, True)
+    assert not t.is_eligible(22, False, False)
 
 
-# --- conditions de jour / d'horaire --------------------------------------------
-# Mercredi 16 décembre 2026 (weekday = 2)
 WEDNESDAY_2PM = datetime(2026, 12, 16, 14, 0)
 WEDNESDAY_6PM = datetime(2026, 12, 16, 18, 0)
 THURSDAY_2PM = datetime(2026, 12, 17, 14, 0)
 
 
 def wednesday_afternoon() -> Tariff:
-    return Tariff("wed", "Mercredi après-midi", 6.5, weekday=2, time_from=time(12, 0), time_until=time(18, 0))
+    return Tariff("wed", "Mercredi après-midi", 6.5,
+                  weekday=2, time_from=time(12, 0), time_until=time(18, 0))
 
 
 def test_schedule_tariff_has_schedule_condition():
@@ -115,7 +115,6 @@ def test_matches_schedule_time_until_is_exclusive():
 
 
 def test_matches_schedule_without_date_is_false():
-    """Sans séance (ex. à l'inscription), un tarif horaire ne peut pas s'appliquer."""
     assert wednesday_afternoon().matches_schedule(None) is False
 
 
@@ -123,7 +122,7 @@ def test_is_eligible_with_schedule():
     t = wednesday_afternoon()
     assert t.is_eligible(30, False, False, WEDNESDAY_2PM) is True
     assert t.is_eligible(30, False, False, THURSDAY_2PM) is False
-    assert t.is_eligible(30, False, False) is False  # pas de date de séance
+    assert t.is_eligible(30, False, False) is False
 
 
 def test_tariff_without_schedule_ignores_screening_date():
@@ -131,7 +130,6 @@ def test_tariff_without_schedule_ignores_screening_date():
     assert t.is_eligible(30, False, False, THURSDAY_2PM) is True
 
 
-# --- __str__ ---------------------------------------------------------------
 def test_tariff_str():
     assert str(Tariff("student", "Étudiant·e", 6.0)) == "Tariff student : Étudiant·e (6.00€)"
 

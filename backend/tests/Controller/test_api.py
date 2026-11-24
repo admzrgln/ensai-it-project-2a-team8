@@ -25,7 +25,7 @@ def test_app_configuration(app):
     "/users", "/movies", "/rooms", "/screenings", "/bookings", "/tariffs", "/accounting-reports",
 ])
 def test_all_routers_are_registered(app, prefix):
-    paths = app.openapi()["paths"]  # toutes les routes visibles dans /docs
+    paths = app.openapi()["paths"]
     assert any(path.startswith(prefix) for path in paths), f"aucune route {prefix}"
 
 

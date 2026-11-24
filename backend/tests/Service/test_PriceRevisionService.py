@@ -27,7 +27,6 @@ def service(dao):
     return PriceRevisionService(revision_dao=dao)
 
 
-# --- find_all ---------------------------------------------------------------------
 def test_find_all_delegates_to_dao(service, dao):
     revisions = [PriceRevision(2027, 2.0), PriceRevision(2028, 3.0)]
     dao.find_all.return_value = revisions
@@ -36,7 +35,6 @@ def test_find_all_delegates_to_dao(service, dao):
     dao.find_all.assert_called_once()
 
 
-# --- plan_revision ----------------------------------------------------------------
 def test_plan_revision_for_next_year(service, dao):
     revision = service.plan_revision(2027, 2.5, today=TODAY)
 
@@ -101,7 +99,6 @@ def test_today_returns_a_date():
     assert isinstance(PriceRevisionService.today(), date)
 
 
-# --- cancel_revision --------------------------------------------------------------
 def test_cancel_revision(service, dao):
     assert service.cancel_revision(2027) is True
     dao.delete_planned.assert_called_once_with(2027)
@@ -114,7 +111,6 @@ def test_cancel_revision_not_found_or_already_applied(service, dao):
         service.cancel_revision(2027)
 
 
-# --- apply_due_revisions ----------------------------------------------------------
 def test_apply_due_revisions_uses_current_year(service, dao):
     dao.apply_due.return_value = [2027]
 

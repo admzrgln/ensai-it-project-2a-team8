@@ -142,7 +142,7 @@ def test_customer_is_refused(mock_service, method, url, body):
 
     assert response.status_code == 403
     assert response.json()["detail"] == "Admin only"
-    assert not mock_service.method_calls  # le service n'est jamais appelé
+    assert not mock_service.method_calls
 
 
 @pytest.mark.parametrize(

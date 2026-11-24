@@ -92,7 +92,7 @@ def test_create_screening(mock_service):
 
     assert response.status_code == 201
     assert response.json()["id_movie"] == 2
-    assert response.json()["id_admin"] == 3  # vient du token, pas du body
+    assert response.json()["id_admin"] == 3
     mock_service.create_screening.assert_called_once()
 
 

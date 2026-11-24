@@ -14,11 +14,10 @@ PASSWORD = "motdepasse123"
 
 @pytest.fixture
 def service():
-    """UserService avec le DAO remplacé par un mock ; par défaut l'email est libre."""
     s = UserService()
     s.user_dao = MagicMock()
     s.user_dao.find_user_by_email.return_value = None
-    s.user_dao.insert_user.side_effect = lambda user: user  # renvoie l'utilisateur inséré
+    s.user_dao.insert_user.side_effect = lambda user: user
     s.user_dao.update_user.side_effect = lambda id_user, user: user
     return s
 
@@ -35,7 +34,6 @@ def stored_user(password: str = PASSWORD, salt: str | None = "sel") -> Customer:
     return Customer(2, "Louise", "F", "l@mail.fr", hash_password(password, salt), BIRTH, salt=salt)
 
 
-# --- Lecture (délégation au DAO) ----------------------------------------------------------
 def test_find_all(service):
     users = [make_customer(id_user=1)]
     service.user_dao.find_all_user.return_value = users
@@ -55,12 +53,11 @@ def test_find_by_email(service):
     assert service.find_by_email("l@mail.fr") is user
 
 
-# --- create_user -------------------------------------------------------------------------
 def test_create_user_hashes_password_with_a_new_salt(service):
     created = service.create_user(make_customer())
 
     assert created.salt is not None and len(created.salt) == 256
-    assert created.password != PASSWORD  # jamais stocké en clair
+    assert created.password != PASSWORD
     assert created.password == hash_password(PASSWORD, created.salt)
     service.user_dao.insert_user.assert_called_once()
 
@@ -106,7 +103,6 @@ def test_create_user_dao_returns_none(service):
     assert service.create_user(make_customer()) is None
 
 
-# --- update_user -------------------------------------------------------------------------
 def test_update_user_rehashes_password(service):
     updated = service.update_user(2, make_customer(id_user=2))
 
@@ -130,7 +126,6 @@ def test_update_user_ensai_email(service):
 
 
 def test_update_user_email_of_another_account_refused(service):
-    """Sinon la contrainte UNIQUE sur l'email ferait une erreur 500."""
     service.user_dao.find_user_by_email.return_value = Customer(
         3, "Autre", "Client", "l@mail.fr", "hash", BIRTH, salt="sel"
     )
@@ -140,8 +135,7 @@ def test_update_user_email_of_another_account_refused(service):
 
 
 def test_update_user_can_keep_own_email(service):
-    """L'email trouvé en base est celui du compte modifié : ce n'est pas un doublon."""
-    service.user_dao.find_user_by_email.return_value = stored_user()  # id_user = 2
+    service.user_dao.find_user_by_email.return_value = stored_user()
 
     assert service.update_user(2, make_customer(id_user=2)) is not None
     service.user_dao.update_user.assert_called_once()
@@ -153,7 +147,6 @@ def test_update_user_not_found(service):
     assert service.update_user(999, make_customer()) is None
 
 
-# --- delete_user -------------------------------------------------------------------------
 @pytest.mark.parametrize("result", [True, False])
 def test_delete_user(service, result):
     service.user_dao.delete_user.return_value = result
@@ -161,7 +154,6 @@ def test_delete_user(service, result):
     service.user_dao.delete_user.assert_called_once_with(2)
 
 
-# --- authenticate ------------------------------------------------------------------------
 def test_authenticate_ok(service):
     user = stored_user()
     service.user_dao.find_user_by_email.return_value = user

@@ -8,7 +8,6 @@ from backend.src.Service.RoomService import RoomService
 
 @pytest.fixture
 def service():
-    """RoomService dont le DAO est remplacé par un mock (aucune base nécessaire)."""
     s = RoomService()
     s.room_dao = MagicMock()
     return s
@@ -20,7 +19,6 @@ def make_room(**overrides) -> Room:
     return Room(**data)
 
 
-# Cas invalides communs à la création et à la modification
 INVALID_ROOMS = [
     pytest.param({"number": ""}, id="numero-vide"),
     pytest.param({"number": "   "}, id="numero-espaces"),
@@ -61,7 +59,6 @@ def test_create_room_success(service):
 
 
 def test_create_room_minimum_capacity_is_valid(service):
-    """Limite : une capacité de 1 est acceptée."""
     service.room_dao.insert_room.return_value = True
 
     assert service.create_room(make_room(id_room=None, capacity=1)) is True
@@ -111,9 +108,6 @@ def test_update_room_dao_failure(service):
     assert service.update_room(make_room(id_room=999)) is False
 
 
-# ---------------------------------------------------------------------------
-# Suppression
-# ---------------------------------------------------------------------------
 def test_delete_room_success(service):
     service.room_dao.delete_room.return_value = True
 

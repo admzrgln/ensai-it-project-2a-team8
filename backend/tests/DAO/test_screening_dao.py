@@ -202,9 +202,6 @@ def test_insert_screening_database_error_returns_false(dao, sql_query):
     assert screening.id_screening is None
 
 
-# ---------------------------------------------------------------------------
-# update_screening
-# ---------------------------------------------------------------------------
 def test_update_screening_success(dao, sql_query):
     sql_query.return_value = {"id_screening": 7}
     screening = make_screening(id_screening=7, available_seats=80)
@@ -233,9 +230,6 @@ def test_update_screening_database_error_returns_false(dao, sql_query):
     assert dao.update_screening(make_screening(id_screening=7)) is False
 
 
-# ---------------------------------------------------------------------------
-# screening_delete
-# ---------------------------------------------------------------------------
 def test_screening_delete_success(dao, sql_query):
     sql_query.return_value = {"id_screening": 7}
 

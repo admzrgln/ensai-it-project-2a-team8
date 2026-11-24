@@ -20,8 +20,8 @@ SERVICE = "backend.src.Controller.UserController.user_service"
 
 jwt = JwtService()
 ADMIN = {"Authorization": f"Bearer {jwt.encode_jwt(1, 'admin').access_token}"}
-LOUISE = {"Authorization": f"Bearer {jwt.encode_jwt(2, 'customer').access_token}"}  # client n°2
-OTHER = {"Authorization": f"Bearer {jwt.encode_jwt(3, 'customer').access_token}"}  # client n°3
+LOUISE = {"Authorization": f"Bearer {jwt.encode_jwt(2, 'customer').access_token}"}
+OTHER = {"Authorization": f"Bearer {jwt.encode_jwt(3, 'customer').access_token}"}
 
 signup_data = {
     "first_name": "Louise",

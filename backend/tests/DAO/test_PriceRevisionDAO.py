@@ -1,9 +1,3 @@
-"""Unit tests of PriceRevisionDao.
-
-DBConnector is replaced by a mock: no PostgreSQL needed.
-apply_due() uses the connection directly (one transaction for several queries),
-so we also mock the connection and its cursor.
-"""
 from datetime import datetime
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -50,7 +44,6 @@ def revision_row(**overrides) -> dict:
     return row
 
 
-# --- Conversion ------------------------------------------------------------------
 def test_to_revision_converts_decimal_to_float():
     revision = PriceRevisionDao._to_revision(revision_row())
 
@@ -67,9 +60,9 @@ def test_to_revision_keeps_applied_at():
     assert revision.applied_at == APPLIED_AT
 
 
-# --- find_all ---------------------------------------------------------------------
 def test_find_all_maps_rows(dao, sql_query):
-    sql_query.return_value = [revision_row(year=2027, applied_at=APPLIED_AT), revision_row(year=2028)]
+    sql_query.return_value = [revision_row(year=2027,
+                              applied_at=APPLIED_AT), revision_row(year=2028)]
 
     revisions = dao.find_all()
 
@@ -92,7 +85,6 @@ def test_find_all_reraises_database_error(dao, sql_query):
         dao.find_all()
 
 
-# --- upsert_planned ---------------------------------------------------------------
 def test_upsert_planned_success(dao, sql_query):
     sql_query.return_value = {"year": 2028}
 
@@ -116,7 +108,6 @@ def test_upsert_planned_reraises_database_error(dao, sql_query):
         dao.upsert_planned(PriceRevision(2028, 2.5))
 
 
-# --- delete_planned ---------------------------------------------------------------
 def test_delete_planned_success(dao, sql_query):
     sql_query.return_value = {"year": 2028}
 
@@ -138,11 +129,9 @@ def test_delete_planned_reraises_database_error(dao, sql_query):
         dao.delete_planned(2028)
 
 
-# --- apply_due --------------------------------------------------------------------
 def test_apply_due_nothing_to_apply(dao, connector, cursor):
     assert dao.apply_due(2027) == []
 
-    # seulement le SELECT, aucun UPDATE
     assert cursor.execute.call_count == 1
     assert cursor.execute.call_args.args[1] == {"year": 2027}
     connector.get_connection.return_value.close.assert_called_once()
@@ -156,7 +145,6 @@ def test_apply_due_applies_revisions_in_order(dao, cursor):
 
     assert dao.apply_due(2028) == [2027, 2028]
 
-    # 1 SELECT + 2 UPDATE par révision (les prix, puis applied_at)
     queries = [c.args[0] for c in cursor.execute.call_args_list]
     params = [c.args[1] for c in cursor.execute.call_args_list]
     assert len(queries) == 5
@@ -167,7 +155,8 @@ def test_apply_due_applies_revisions_in_order(dao, cursor):
 
 
 def test_apply_due_locks_rows_and_skips_applied_revisions(dao, cursor):
-    """FOR UPDATE + applied_at IS NULL : deux instances ne peuvent pas appliquer deux fois la même révision."""
+    """FOR UPDATE + applied_at IS NULL : deux instances ne peuvent pas appliquer
+     deux fois la même révision."""
     dao.apply_due(2028)
 
     select = cursor.execute.call_args_list[0].args[0]
@@ -196,12 +185,12 @@ def test_apply_due_runs_in_one_transaction(dao, connector, cursor):
 
 def test_apply_due_error_is_reraised_and_connection_closed(dao, connector, cursor):
     cursor.fetchall.return_value = [{"year": 2027, "rate_percent": Decimal("2.00")}]
-    cursor.execute.side_effect = [None, Exception("db down")]  # le SELECT passe, l'UPDATE plante
+    cursor.execute.side_effect = [None, Exception("db down")]
 
     with pytest.raises(Exception, match="db down"):
         dao.apply_due(2027)
 
     conn = connector.get_connection.return_value
     exc_type = conn.__exit__.call_args.args[0]
-    assert exc_type is Exception  # `with conn` voit l'erreur -> ROLLBACK
+    assert exc_type is Exception
     conn.close.assert_called_once()

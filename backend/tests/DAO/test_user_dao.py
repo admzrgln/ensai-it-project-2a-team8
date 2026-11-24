@@ -36,18 +36,19 @@ def admin_row(**overrides) -> dict:
 
 
 def make_customer() -> Customer:
-    return Customer(None, "Louise", "F", "l@ensai.fr", "hash", BIRTH, is_ensai_student=True, salt="abc")
+    return Customer(None, "Louise", "F", "l@ensai.fr",
+                    "hash", BIRTH, is_ensai_student=True, salt="abc")
 
 
 def make_admin() -> Administrator:
     return Administrator(None, "Ad", "Min", "admin@mail.fr", "hash", BIRTH, salt="abc")
 
 
-# --- _to_user --------------------------------------------------------------------------
 def test_to_user_customer():
     u = UserDao._to_user(user_row())
     assert isinstance(u, Customer)
-    assert (u.id_user, u.first_name, u.email, u.password, u.salt) == (2, "Louise", "l@ensai.fr", "hash", "abc")
+    assert (u.id_user, u.first_name, u.email, u.password, u.salt) == (2, "Louise",
+                                                                      "l@ensai.fr", "hash", "abc")
     assert u.date_of_birth == BIRTH
     assert u.is_ensai_student is True
 
@@ -68,7 +69,6 @@ def test_to_user_without_optional_columns():
     assert u.is_ensai_student is False
 
 
-# --- GET -------------------------------------------------------------------------------
 def test_find_all_user(dao, sql_query):
     sql_query.return_value = [admin_row(), user_row()]
 
@@ -116,7 +116,6 @@ def test_get_methods_propagate_db_error(dao, sql_query, call):
         call(dao)
 
 
-# --- POST ------------------------------------------------------------------------------
 def test_insert_customer(dao, sql_query):
     sql_query.return_value = user_row()
 
@@ -150,7 +149,6 @@ def test_insert_user_propagates_db_error(dao, sql_query):
         dao.insert_user(make_customer())
 
 
-# --- UPDATE ----------------------------------------------------------------------------
 def test_update_user(dao, sql_query):
     sql_query.return_value = user_row(first_name="Lou")
     customer = make_customer()
@@ -181,7 +179,6 @@ def test_update_user_propagates_db_error(dao, sql_query):
         dao.update_user(2, make_customer())
 
 
-# --- DELETE ----------------------------------------------------------------------------
 def test_delete_user(dao, sql_query):
     sql_query.return_value = {"id_user": 2}
     assert dao.delete_user(2) is True

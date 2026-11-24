@@ -149,7 +149,7 @@ def test_service_errors_become_http_errors(service, exception, status):
     response = client.get(URL, params=PARAMS, headers=ADMIN)
 
     assert response.status_code == status
-    assert response.json()["detail"] == str(exception)  # the message is passed on to the client
+    assert response.json()["detail"] == str(exception)
 
 
 def test_unexpected_error_gives_500(service):

@@ -80,4 +80,4 @@ def test_room_by_id_invalid_id(mock_service):
 def test_rooms_cannot_be_modified(method, url):
     response = client.request(method.upper(), url, json={"number": "Z9", "capacity": 10})
 
-    assert response.status_code == 405  # Method Not Allowed
+    assert response.status_code == 405

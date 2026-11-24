@@ -9,7 +9,6 @@ def test_ticket_constructor_defaults():
     assert t.is_holder is False
     assert t.is_ensai_student is False
     assert t.is_student is False
-    # le tarif et le prix sont remplis plus tard par le TariffService
     assert t.tariff_code is None
     assert t.price is None
     assert t.id_ticket is None

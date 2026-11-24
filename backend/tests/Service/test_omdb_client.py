@@ -42,14 +42,16 @@ def test_init_without_key_raises_key_error(monkeypatch):
 def test_search_returns_list_of_results(client):
     results = [
         {"Title": "Inception", "Year": "2010", "imdbID": "tt1375666", "Poster": "url1"},
-        {"Title": "Inception: The Cobol Job", "Year": "2010", "imdbID": "tt5295894", "Poster": "url2"},
+        {"Title": "Inception: The Cobol Job", "Year": "2010",
+         "imdbID": "tt5295894", "Poster": "url2"},
     ]
     with patch(REQUESTS_GET, return_value=fake_response({"Response": "True", "Search": results})):
         assert client.search("Inception") == results
 
 
 def test_search_sends_expected_request(client):
-    with patch(REQUESTS_GET, return_value=fake_response({"Response": "True", "Search": []})) as mock_get:
+    with patch(REQUESTS_GET, return_value=fake_response(
+            {"Response": "True", "Search": []})) as mock_get:
         client.search("Inception")
 
     mock_get.assert_called_once_with(
@@ -100,9 +102,6 @@ def test_not_found_detection_is_case_insensitive(client):
         assert client.get_by_imdb_id("tt0000000") is None
 
 
-# ---------------------------------------------------------------------------
-# Erreurs
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
     "network_error",
     [
@@ -115,7 +114,6 @@ def test_network_error_raises_omdb_error(client, network_error):
         with pytest.raises(OmdbError, match="OMDb unreachable") as exc_info:
             client.search("Inception")
 
-    # l'erreur d'origine est conservée (raise ... from error)
     assert exc_info.value.__cause__ is network_error
 
 

@@ -11,7 +11,6 @@ from backend.src.Model.User import User
 BIRTH = date(2004, 3, 1)
 
 
-# --- User ----------------------------------------------------------------------------
 def test_user_constructor():
     u = User(1, "Louise", "F", "l@mail.fr", "hash", BIRTH, role="customer", salt="abc")
     assert (u.id_user, u.first_name, u.last_name, u.email) == (1, "Louise", "F", "l@mail.fr")
@@ -28,7 +27,6 @@ def test_user_str_contains_main_information():
         assert part in text
 
 
-# --- Customer --------------------------------------------------------------------------
 def test_customer_role_is_forced():
     c = Customer(2, "Louise", "F", "l@mail.fr", "pw", BIRTH)
     assert c.role == "customer"
@@ -53,7 +51,6 @@ def test_customer_str():
     assert "Louise F" in text and "customer" in text and "l@mail.fr" in text
 
 
-# --- Administrator ---------------------------------------------------------------------
 def test_administrator_role_is_forced():
     a = Administrator(1, "Ad", "Min", "admin@mail.fr", "pw", BIRTH, salt="abc")
     assert a.role == "admin"
@@ -67,7 +64,6 @@ def test_administrator_str():
     assert "Ad Min" in text and "admin" in text and "admin@mail.fr" in text
 
 
-# --- APIUser ---------------------------------------------------------------------------
 def test_api_user_ok():
     u = APIUser(id=3, username="louise")
     assert (u.id, u.username) == (3, "louise")

@@ -8,7 +8,7 @@ from backend.src.Model.Ticket import Ticket
 from backend.src.Service.TariffService import TariffError, TariffService, compute_age
 
 SCREENING_DAY = date(2026, 12, 15)
-SCREENING_DT = datetime(2026, 12, 15, 20, 30)  # mardi soir
+SCREENING_DT = datetime(2026, 12, 15, 20, 30)
 FULL_PRICE = 9.0
 
 GRID = [
@@ -72,12 +72,12 @@ def test_ensai_student_gets_cheapest_tariff(service):
 
 def test_cheapest_eligible_tariff_wins(service):
     """Un élève ENSAI de 10 ans a droit à 3 tarifs : on prend le moins cher (ENSAI, 4 €)."""
-    t = service.price_ticket(make_ticket(date_of_birth=date(2016, 5, 1), is_ensai_student=True), SCREENING_DT)
+    t = service.price_ticket(make_ticket(date_of_birth=date(2016, 5, 1),
+                             is_ensai_student=True), SCREENING_DT)
     assert (t.tariff_code, t.price) == ("ensai", 4.0)
 
 
 def test_age_is_computed_on_screening_day(service):
-    """14 ans le lendemain de la séance : encore tarif enfant le jour de la séance."""
     t = service.price_ticket(make_ticket(date_of_birth=date(2012, 12, 16)), SCREENING_DT)
     assert t.tariff_code == "child"
 
@@ -89,7 +89,6 @@ def test_price_is_rounded_to_cents(service):
 
 
 def test_grid_passed_as_argument_does_not_read_database(service):
-    """BookingService charge la grille une fois et la passe pour chaque billet."""
     grid = [Tariff("full", "Plein tarif", 7.0)]
     t = service.price_ticket(make_ticket(), SCREENING_DT, grid)
     assert t.price == 7.0
@@ -150,7 +149,8 @@ def test_free_tariff_is_valid(service):
     pytest.param(Tariff("", "X", 5.0), id="code-vide"),
     pytest.param(Tariff("x", "", 5.0), id="libelle-vide"),
     pytest.param(Tariff("x", "X", 5.0, weekday=7), id="jour-invalide"),
-    pytest.param(Tariff("x", "X", 5.0, time_from=time(18, 0), time_until=time(12, 0)), id="horaires-inverses"),
+    pytest.param(Tariff("x", "X", 5.0, time_from=time(18, 0),
+                        time_until=time(12, 0)), id="horaires-inverses"),
     pytest.param(Tariff("full", "Plein tarif", 9.0, max_age=13), id="plein-tarif-avec-condition"),
 ])
 def test_invalid_tariff_refused(service, tariff):
@@ -182,7 +182,6 @@ def test_deactivate_tariff(service):
     assert service.deactivate_tariff("child") is True
 
 
-# --- Cas supplémentaires (coverage 100 %) ---------------------------------------
 def test_find_all_delegates_to_dao(service):
     assert service.find_all(only_active=False) == GRID
     service.tariff_dao.find_all.assert_called_once_with(False)

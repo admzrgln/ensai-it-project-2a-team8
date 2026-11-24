@@ -5,7 +5,8 @@ from backend.src.Model.Ticket import Ticket
 
 
 def make_ticket(price: float | None, **overrides) -> Ticket:
-    data = dict(first_name="A", last_name="B", date_of_birth=date(1990, 1, 1), tariff_code="full", price=price)
+    data = dict(first_name="A", last_name="B",
+                date_of_birth=date(1990, 1, 1), tariff_code="full", price=price)
     data.update(overrides)
     return Ticket(**data)
 
@@ -31,7 +32,6 @@ def test_seat_count_is_number_of_tickets():
 
 
 def test_total_price_is_rounded_sum():
-    # 0.1 + 0.2 = 0.30000000000000004 en flottants : on doit obtenir 0.3
     b = Booking(10, 1, tickets=[make_ticket(0.1), make_ticket(0.2)])
     assert b.total_price == 0.3
 

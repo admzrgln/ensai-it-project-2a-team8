@@ -11,9 +11,6 @@ from backend.src.Model.Ticket import Ticket
 BOOKED_AT = datetime(2026, 11, 4, 10, 0)
 
 
-# --------------------------------------------------------------------------
-# Fixtures
-# --------------------------------------------------------------------------
 @pytest.fixture
 def connector():
     """Remplace DBConnector dans BookingDAO : renvoie le mock de l'instance DBConnector()."""
@@ -30,12 +27,12 @@ def sql_query(connector):
 def cursor(connector):
     """Faux curseur pour les méthodes en transaction (get_connection)."""
     conn = MagicMock()
-    conn.__exit__.return_value = False  # sinon le mock "avalerait" les exceptions du bloc with
+    conn.__exit__.return_value = False
     cur = MagicMock()
     conn.cursor.return_value.__enter__.return_value = cur
     conn.cursor.return_value.__exit__.return_value = False
     connector.get_connection.return_value = conn
-    cur.conn = conn  # accès pratique dans les tests
+    cur.conn = conn
     return cur
 
 
@@ -52,7 +49,7 @@ def booking_row(**overrides) -> dict:
 
 
 def ticket_row(**overrides) -> dict:
-    row = {"id_ticket": 7, "id_booking": 5, "first_name": "Louise", "last_name": "F",
+    row = {"id_ticket": 7, "id_booking": 5, "first_name": "Thomas", "last_name": "E",
            "date_of_birth": date(2004, 3, 1), "is_holder": True, "is_ensai_student": True,
            "is_student": False, "tariff_code": "ensai", "price": Decimal("4.00")}
     row.update(overrides)
@@ -61,17 +58,15 @@ def ticket_row(**overrides) -> dict:
 
 def make_booking() -> Booking:
     return Booking(id_customer=10, id_screening=1, tickets=[
-        Ticket("Louise", "F", date(2004, 3, 1), is_holder=True, is_ensai_student=True, tariff_code="ensai", price=4.0),
+        Ticket("Thomas", "E", date(2004, 3, 1),
+               is_holder=True, is_ensai_student=True, tariff_code="ensai", price=4.0),
         Ticket("Kid", "F", date(2018, 1, 1), tariff_code="child", price=4.5),
     ])
 
 
-# --------------------------------------------------------------------------
-# Conversions
-# --------------------------------------------------------------------------
 def test_to_ticket_maps_columns_and_converts_decimal_to_float():
     t = BookingDao._to_ticket(ticket_row())
-    assert (t.id_ticket, t.id_booking, t.first_name, t.last_name) == (7, 5, "Louise", "F")
+    assert (t.id_ticket, t.id_booking, t.first_name, t.last_name) == (7, 5, "Thomas", "E")
     assert t.date_of_birth == date(2004, 3, 1)
     assert t.is_holder is True and t.is_ensai_student is True and t.is_student is False
     assert t.tariff_code == "ensai"
@@ -87,11 +82,9 @@ def test_to_booking_maps_columns():
     assert b.tickets == tickets
 
 
-# --------------------------------------------------------------------------
-# GET
-# --------------------------------------------------------------------------
 def test_find_by_id_found_loads_tickets(dao, sql_query):
-    sql_query.side_effect = [booking_row(), [ticket_row(), ticket_row(id_ticket=8, first_name="Kid")]]
+    sql_query.side_effect = [booking_row(),
+                             [ticket_row(), ticket_row(id_ticket=8, first_name="Kid")]]
 
     b = dao.find_by_id(5)
 
@@ -103,7 +96,7 @@ def test_find_by_id_found_loads_tickets(dao, sql_query):
 def test_find_by_id_not_found(dao, sql_query):
     sql_query.return_value = None
     assert dao.find_by_id(999) is None
-    sql_query.assert_called_once()  # on ne cherche pas les billets
+    sql_query.assert_called_once()
 
 
 def test_find_by_id_propagates_db_error(dao, sql_query):
@@ -131,11 +124,7 @@ def test_find_by_customer_without_booking(dao, sql_query):
     assert dao.find_by_customer(10) == []
 
 
-# --------------------------------------------------------------------------
-# POST : insert_booking (transaction)
-# --------------------------------------------------------------------------
 def test_insert_booking_ok(dao, cursor):
-    # 1er fetchone : UPDATE screening, 2e : INSERT booking, puis un par billet
     cursor.fetchone.side_effect = [
         {"available_seats": 48},
         {"id_booking": 5, "booking_date": BOOKED_AT},
@@ -150,24 +139,25 @@ def test_insert_booking_ok(dao, cursor):
     assert booking.booking_date == BOOKED_AT
     assert [t.id_ticket for t in booking.tickets] == [7, 8]
     assert all(t.id_booking == 5 for t in booking.tickets)
-    # 1 UPDATE + 1 INSERT booking + 2 INSERT ticket
     assert cursor.execute.call_count == 4
     cursor.conn.close.assert_called_once()
 
 
 def test_insert_booking_decreases_seats_by_number_of_tickets(dao, cursor):
-    cursor.fetchone.side_effect = [{"available_seats": 48}, {"id_booking": 5, "booking_date": BOOKED_AT},
+    cursor.fetchone.side_effect = [{"available_seats": 48}, {"id_booking": 5,
+                                   "booking_date": BOOKED_AT},
                                    {"id_ticket": 7}, {"id_ticket": 8}]
     dao.insert_booking(make_booking())
 
     query, params = cursor.execute.call_args_list[0].args
     assert "UPDATE public.screening" in query
-    assert "available_seats >= %(n)s" in query  # la BDD refuse s'il n'y a plus assez de places
+    assert "available_seats >= %(n)s" in query
     assert params == {"n": 2, "id_screening": 1}
 
 
 def test_insert_booking_saves_total_and_ticket_prices(dao, cursor):
-    cursor.fetchone.side_effect = [{"available_seats": 48}, {"id_booking": 5, "booking_date": BOOKED_AT},
+    cursor.fetchone.side_effect = [{"available_seats": 48},
+                                   {"id_booking": 5, "booking_date": BOOKED_AT},
                                    {"id_ticket": 7}, {"id_ticket": 8}]
     dao.insert_booking(make_booking())
 
@@ -175,16 +165,17 @@ def test_insert_booking_saves_total_and_ticket_prices(dao, cursor):
     assert booking_params["total"] == 8.5
     assert booking_params["seat_count"] == 2
     ticket_params = cursor.execute.call_args_list[3].args[1]
-    assert (ticket_params["first_name"], ticket_params["tariff_code"], ticket_params["price"]) == ("Kid", "child", 4.5)
+    assert (ticket_params["first_name"],
+            ticket_params["tariff_code"], ticket_params["price"]) == ("Kid", "child", 4.5)
 
 
 def test_insert_booking_not_enough_seats_writes_nothing(dao, cursor):
-    cursor.fetchone.return_value = None  # l'UPDATE n'a touché aucune ligne
+    cursor.fetchone.return_value = None
 
     booking = make_booking()
     assert dao.insert_booking(booking) is False
 
-    assert cursor.execute.call_count == 1  # ni réservation ni billet insérés
+    assert cursor.execute.call_count == 1
     cursor.conn.rollback.assert_called_once()
     cursor.conn.close.assert_called_once()
     assert booking.id_booking is None
@@ -197,9 +188,6 @@ def test_insert_booking_db_error_is_raised_and_connection_closed(dao, cursor):
     cursor.conn.close.assert_called_once()
 
 
-# --------------------------------------------------------------------------
-# UPDATE : cancel_booking (transaction)
-# --------------------------------------------------------------------------
 def test_cancel_booking_gives_seats_back(dao, cursor):
     cursor.fetchone.return_value = {"id_screening": 1, "seat_count": 3}
 
@@ -215,7 +203,7 @@ def test_cancel_booking_gives_seats_back(dao, cursor):
 def test_cancel_booking_not_found_or_already_cancelled(dao, cursor):
     cursor.fetchone.return_value = None
     assert dao.cancel_booking(5) is False
-    assert cursor.execute.call_count == 1  # on ne rend pas de places
+    assert cursor.execute.call_count == 1
     cursor.conn.close.assert_called_once()
 
 
@@ -226,9 +214,6 @@ def test_cancel_booking_db_error_is_raised(dao, cursor):
     cursor.conn.close.assert_called_once()
 
 
-# --------------------------------------------------------------------------
-# Comptabilité
-# --------------------------------------------------------------------------
 def test_revenue_by_movie(dao, sql_query):
     sql_query.return_value = [
         {"id_movie": 1, "title": "Dune", "tickets_sold": 3, "revenue": Decimal("19.50")},
@@ -253,7 +238,8 @@ def test_revenue_by_movie_empty_period(dao, sql_query):
 
 
 def test_revenue_by_tariff(dao, sql_query):
-    sql_query.return_value = [{"tariff_code": "student", "tickets_sold": 2, "revenue": Decimal("12.00")}]
+    sql_query.return_value = [{"tariff_code": "student",
+                               "tickets_sold": 2, "revenue": Decimal("12.00")}]
 
     res = dao.revenue_by_tariff(date(2026, 11, 1), date(2026, 11, 30))
 
@@ -275,9 +261,6 @@ def test_find_by_customer_propagates_db_error(dao, sql_query):
         dao.find_by_customer(10)
 
 
-# --------------------------------------------------------------------------
-# count_booked_seats (utilisé à la modification d'une séance)
-# --------------------------------------------------------------------------
 def test_count_booked_seats(sql_query):
     """SUM renvoie un Decimal avec psycopg2 : on le convertit en int."""
     sql_query.return_value = {"booked": Decimal("12")}
@@ -306,4 +289,3 @@ def test_count_booked_seats_reraises_database_error(sql_query):
 
     with pytest.raises(Exception, match="db down"):
         BookingDao().count_booked_seats(3)
-

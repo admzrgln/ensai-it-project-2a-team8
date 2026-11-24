@@ -17,14 +17,12 @@ def connect():
 
 @pytest.fixture
 def cursor(connect):
-    """Faux curseur renvoyé par `with psycopg2.connect(...) as conn: with conn.cursor() as cur`."""
     cur = MagicMock()
     conn = connect.return_value.__enter__.return_value
     conn.cursor.return_value.__enter__.return_value = cur
     return cur
 
 
-# --- Constructeur -------------------------------------------------------------------
 def test_config_from_dict():
     db = DBConnector(CONFIG)
     assert (db.host, db.port, db.database, db.user, db.password, db.schema) == (
@@ -33,10 +31,12 @@ def test_config_from_dict():
 
 def test_config_from_environment(monkeypatch):
     for key, value in {"POSTGRES_HOST": "h", "POSTGRES_PORT": "1", "POSTGRES_DATABASE": "d",
-                       "POSTGRES_USER": "u", "POSTGRES_PASSWORD": "p", "POSTGRES_SCHEMA": "s"}.items():
+                       "POSTGRES_USER": "u", "POSTGRES_PASSWORD": "p",
+                       "POSTGRES_SCHEMA": "s"}.items():
         monkeypatch.setenv(key, value)
     db = DBConnector()
-    assert (db.host, db.port, db.database, db.user, db.password, db.schema) == ("h", "1", "d", "u", "p", "s")
+    assert (db.host, db.port, db.database,
+            db.user, db.password, db.schema) == ("h", "1", "d", "u", "p", "s")
 
 
 def test_missing_environment_variable_raises(monkeypatch):
@@ -45,7 +45,6 @@ def test_missing_environment_variable_raises(monkeypatch):
         DBConnector()
 
 
-# --- get_connection -------------------------------------------------------------------
 def test_get_connection_uses_config_and_schema(connect):
     conn = DBConnector(CONFIG).get_connection()
 
@@ -56,7 +55,6 @@ def test_get_connection_uses_config_and_schema(connect):
     assert kwargs["options"] == "-c search_path=public"
 
 
-# --- sql_query -----------------------------------------------------------------------
 def test_sql_query_one(connect, cursor):
     cursor.fetchone.return_value = {"id_movie": 1}
 

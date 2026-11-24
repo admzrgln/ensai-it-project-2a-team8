@@ -27,7 +27,6 @@ def tariff_row(**overrides) -> dict:
     return row
 
 
-# --- Conversions -------------------------------------------------------------
 def test_to_tariff_maps_columns_and_converts_decimal_to_float():
     t = TariffDao._to_tariff(tariff_row())
     assert (t.code, t.label, t.min_age, t.max_age) == ("child", "Moins de 14 ans", None, 13)
@@ -42,7 +41,8 @@ def test_to_tariff_without_schedule_columns():
 
 
 def test_to_tariff_maps_schedule_columns():
-    t = TariffDao._to_tariff(tariff_row(code="wed", weekday=2, time_from=time(12, 0), time_until=time(18, 0)))
+    t = TariffDao._to_tariff(tariff_row(code="wed", weekday=2,
+                             time_from=time(12, 0), time_until=time(18, 0)))
     assert (t.weekday, t.time_from, t.time_until) == (2, time(12, 0), time(18, 0))
 
 
@@ -55,9 +55,9 @@ def test_to_data_contains_all_columns():
     }
 
 
-# --- GET ---------------------------------------------------------------------
 def test_find_all_active_only_by_default(dao, sql_query):
-    sql_query.return_value = [tariff_row(), tariff_row(code="full", label="Plein tarif", price=Decimal("9.00"), max_age=None)]
+    sql_query.return_value = [tariff_row(), tariff_row(code="full",
+                              label="Plein tarif", price=Decimal("9.00"), max_age=None)]
 
     tariffs = dao.find_all()
 
@@ -102,7 +102,6 @@ def test_find_by_code_propagates_db_error(dao, sql_query):
         dao.find_by_code("child")
 
 
-# --- POST / UPDATE / "DELETE" ------------------------------------------------
 def test_insert_tariff_ok(dao, sql_query):
     sql_query.return_value = {"code": "senior"}
     t = Tariff("senior", "65 ans et +", 5.0, min_age=65)
@@ -142,7 +141,7 @@ def test_deactivate_tariff_ok(dao, sql_query):
     assert dao.deactivate_tariff("child") is True
     query = sql_query.call_args.args[0]
     assert "SET is_active = FALSE" in query
-    assert "DELETE" not in query  # on ne supprime jamais vraiment un tarif
+    assert "DELETE" not in query
 
 
 def test_deactivate_tariff_not_found_or_already_inactive(dao, sql_query):

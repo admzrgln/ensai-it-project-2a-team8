@@ -35,12 +35,11 @@ def guest(**overrides) -> Ticket:
 
 @pytest.fixture
 def service():
-    """BookingService avec les DAO mockés ; par défaut tout est valide."""
     s = BookingService()
     s.booking_dao = MagicMock()
     s.screening_dao = MagicMock()
     s.user_dao = MagicMock()
-    s.price_revision_service = MagicMock()  # sinon apply_due_revisions() irait lire la base
+    s.price_revision_service = MagicMock()
     s.user_dao.find_by_id.return_value = make_customer()
     s.screening_dao.find_by_id.return_value = make_screening()
     s.booking_dao.insert_booking.return_value = True
@@ -61,7 +60,7 @@ def test_book_myself_and_guests(service):
     assert booking.seat_count == 3
     assert [t.tariff_code for t in booking.tickets] == ["student", "full", "child"]
     assert booking.tickets[0].is_holder is True
-    assert booking.tickets[0].date_of_birth == date(2004, 3, 1)  # reprise du profil
+    assert booking.tickets[0].date_of_birth == date(2004, 3, 1)
     assert booking.total_price == round(sum(t.price for t in booking.tickets), 2)
     service.booking_dao.insert_booking.assert_called_once_with(booking)
 
@@ -95,7 +94,8 @@ def test_empty_booking_refused(service):
 
 
 def test_past_screening_refused(service):
-    service.screening_dao.find_by_id.return_value = make_screening(date_time=datetime.now() - timedelta(hours=1))
+    service.screening_dao.find_by_id.return_value = make_screening(
+        date_time=datetime.now() - timedelta(hours=1))
     with pytest.raises(BookingError):
         service.book(10, 1, True, False, [])
 
@@ -108,7 +108,6 @@ def test_not_enough_seats_before_insert(service):
 
 
 def test_not_enough_seats_race_condition(service):
-    """La BDD refuse l'UPDATE car quelqu'un a pris les places entre-temps."""
     service.booking_dao.insert_booking.return_value = False
     with pytest.raises(NotEnoughSeatsError):
         service.book(10, 1, True, False, [])
@@ -120,19 +119,20 @@ def test_guest_born_after_screening_refused(service):
 
 
 def test_cancel_other_customer_booking_refused(service):
-    service.booking_dao.find_by_id.return_value = Booking(id_customer=99, id_screening=1, id_booking=5)
+    service.booking_dao.find_by_id.return_value = Booking(
+        id_customer=99, id_screening=1, id_booking=5)
     with pytest.raises(BookingError):
         service.cancel(5, id_customer=10)
     service.booking_dao.cancel_booking.assert_not_called()
 
 
 def test_cancel_ok(service):
-    service.booking_dao.find_by_id.return_value = Booking(id_customer=10, id_screening=1, id_booking=5)
+    service.booking_dao.find_by_id.return_value = Booking(
+        id_customer=10, id_screening=1, id_booking=5)
     service.booking_dao.cancel_booking.return_value = True
     assert service.cancel(5, id_customer=10) is True
 
 
-# --- Cas d'erreur supplémentaires (coverage 100 %) ---------------------------------
 def test_unknown_screening_refused(service):
     service.screening_dao.find_by_id.return_value = None
     with pytest.raises(BookingError, match="Screening not found"):
@@ -157,7 +157,7 @@ def test_guest_without_date_of_birth_refused(service):
 
 
 def test_more_than_max_tickets_refused(service):
-    guests = [guest() for _ in range(10)]  # + le client = 11 billets
+    guests = [guest() for _ in range(10)]
     with pytest.raises(BookingError, match="limited to 10 tickets"):
         service.book(10, 1, True, False, guests)
     service.booking_dao.insert_booking.assert_not_called()
@@ -178,23 +178,24 @@ def test_find_by_customer_delegates_to_dao(service):
 
 
 def test_cancel_already_cancelled_booking_refused(service):
-    service.booking_dao.find_by_id.return_value = Booking(id_customer=10, id_screening=1, id_booking=5,
-                                                          status="cancelled")
+    service.booking_dao.find_by_id.return_value = Booking(
+        id_customer=10, id_screening=1, id_booking=5, status="cancelled")
     with pytest.raises(BookingError, match="already cancelled"):
         service.cancel(5, id_customer=10)
     service.booking_dao.cancel_booking.assert_not_called()
 
 
 def test_cancel_started_screening_refused(service):
-    service.booking_dao.find_by_id.return_value = Booking(id_customer=10, id_screening=1, id_booking=5)
-    service.screening_dao.find_by_id.return_value = make_screening(date_time=datetime.now() - timedelta(hours=1))
+    service.booking_dao.find_by_id.return_value = Booking(
+        id_customer=10, id_screening=1, id_booking=5)
+    service.screening_dao.find_by_id.return_value = make_screening(
+        date_time=datetime.now() - timedelta(hours=1))
     with pytest.raises(BookingError, match="already started"):
         service.cancel(5, id_customer=10)
     service.booking_dao.cancel_booking.assert_not_called()
 
 
 def test_prices_come_from_the_grid(service):
-    """Adulte = plein tarif, enfant = tarif enfant, et le total est la somme des billets."""
     booking = service.quote(10, 1, include_myself=False, customer_is_student=False,
                             guests=[guest(), guest(date_of_birth=date(2018, 1, 1))])
     assert [t.price for t in booking.tickets] == [FULL_PRICE, 4.50]
@@ -202,13 +203,11 @@ def test_prices_come_from_the_grid(service):
 
 
 def test_due_price_revisions_are_applied_before_pricing(service):
-    """La révision annuelle des prix doit être appliquée avant de calculer le prix des billets."""
     service.book(10, 1, True, False, [])
     service.price_revision_service.apply_due_revisions.assert_called_once()
 
 
 def test_grid_without_full_tariff_gives_booking_error(service):
-    """Une TariffError (grille incomplète) est renvoyée au client comme BookingError."""
     service.tariff_service.tariff_dao.find_all.return_value = [
         Tariff("child", "Moins de 14 ans", 4.50, max_age=13),
     ]

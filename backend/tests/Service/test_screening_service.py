@@ -6,17 +6,12 @@ import pytest
 from backend.src.Model.Screening import Screening
 from backend.src.Service.ScreeningService import ScreeningError, ScreeningNotFoundError, ScreeningService
 
-MOVIE_DURATION = 120  # minutes
+MOVIE_DURATION = 120
 ROOM_CAPACITY = 200
 
 
 @pytest.fixture
 def service():
-    """ScreeningService avec tous les DAO remplacés par des mocks.
-
-    Par défaut, on se place dans le cas "tout est valide" ; chaque test
-    modifie uniquement l'élément qu'il veut faire échouer.
-    """
     s = ScreeningService()
     s.screening_dao = MagicMock()
     s.room_dao = MagicMock()
@@ -30,7 +25,7 @@ def service():
     s.screening_dao.find_overlapping.return_value = []
     s.screening_dao.insert_screening.return_value = True
     s.screening_dao.update_screening.return_value = True
-    s.screening_dao.find_by_id.return_value = MagicMock()  # la séance à modifier existe
+    s.screening_dao.find_by_id.return_value = MagicMock()
     s.booking_dao.count_booked_seats.return_value = 0
     return s
 
@@ -92,7 +87,6 @@ def test_create_screening_dao_failure(service):
 
 
 def test_create_sets_available_seats_to_room_capacity(service):
-    """available_seats n'est pas choisi par l'admin : à la création, toute la salle est libre."""
     screening = make_screening()
 
     service.create_screening(screening)
@@ -109,7 +103,6 @@ def test_create_ignores_available_seats_sent_by_admin(service):
 
 
 def test_create_converts_timezone_aware_date_to_server_time(service):
-    """Une date envoyée avec fuseau ("...Z") est stockée sans fuseau, en heure du serveur."""
     aware = (datetime.now() + timedelta(days=7)).astimezone(timezone.utc)
     screening = make_screening(date_time=aware)
 
@@ -160,7 +153,6 @@ def test_create_refused_unknown_organizer(service):
 
 
 def test_create_refused_organizer_is_not_admin(service):
-    """Un customer ne peut pas créer de séance."""
     service.user_dao.find_by_id.return_value = MagicMock(role="customer")
 
     with pytest.raises(ScreeningError, match="User 1 is not an administrator"):
@@ -171,13 +163,13 @@ def test_create_refused_organizer_is_not_admin(service):
 def test_create_refused_overlapping_screening(service):
     service.screening_dao.find_overlapping.return_value = [make_screening(id_screening=42)]
 
-    with pytest.raises(ScreeningError, match=r"Room 1 is already used at this time \(screening 42\)"):
+    with pytest.raises(ScreeningError,
+                       match=r"Room 1 is already used at this time \(screening 42\)"):
         service.create_screening(make_screening())
     service.screening_dao.insert_screening.assert_not_called()
 
 
 def test_overlap_check_uses_room_start_and_computed_end(service):
-    """La fin de séance = début + durée du film ; à la création, aucun id n'est exclu."""
     start = datetime.now() + timedelta(days=3)
     screening = make_screening(id_room=7, date_time=start)
 
@@ -252,7 +244,6 @@ def test_update_screening_not_found(service):
 
 
 def test_update_keeps_seats_already_booked(service):
-    """Places libres = capacité de la salle - places déjà réservées."""
     service.booking_dao.count_booked_seats.return_value = 50
     screening = make_screening(id_screening=3)
 
@@ -272,7 +263,6 @@ def test_update_all_seats_booked_gives_zero_available(service):
 
 
 def test_update_refused_new_room_smaller_than_booked_seats(service):
-    """On ne peut pas déplacer une séance dans une salle trop petite pour les réservations existantes."""
     service.booking_dao.count_booked_seats.return_value = ROOM_CAPACITY + 1
 
     with pytest.raises(ScreeningError, match=f"Room 1 has only {ROOM_CAPACITY} seats"):
@@ -281,7 +271,6 @@ def test_update_refused_new_room_smaller_than_booked_seats(service):
 
 
 def test_update_screening_dao_failure(service):
-    """Par exemple : séance introuvable côté base."""
     service.screening_dao.update_screening.return_value = False
 
     with pytest.raises(ScreeningNotFoundError, match="Screening 999 not found"):
@@ -312,6 +301,5 @@ def test_overlap_message_lists_all_conflicting_screenings(service):
 
 
 def test_past_date_message_shows_server_time(service):
-    """L'heure du serveur peut être en UTC : on l'affiche pour éviter les surprises."""
     with pytest.raises(ScreeningError, match=r"server time: \d{4}-\d{2}-\d{2} \d{2}:\d{2}"):
         service.create_screening(make_screening(date_time=datetime.now() - timedelta(minutes=1)))

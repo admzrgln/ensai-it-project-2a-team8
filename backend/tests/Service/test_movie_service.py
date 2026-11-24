@@ -9,8 +9,6 @@ from backend.src.Service.OmdbClient import OmdbError
 
 @pytest.fixture
 def service(monkeypatch):
-    """MovieService dont le DAO et le client OMDb sont remplacés par des mocks."""
-    # OmdbClient() lit cette variable à la création
     monkeypatch.setenv("OMDB_API_KEY", "fake-key")
 
     s = MovieService()
@@ -85,7 +83,6 @@ def test_find_by_id_not_found(service):
 
 
 def test_find_by_title_adds_wildcards(service):
-    """Le service doit entourer le titre de % pour que le ILIKE du DAO fasse une recherche partielle."""
     movie = make_movie()
     service.movie_dao.find_by_title.return_value = movie
 
@@ -100,8 +97,6 @@ def test_find_by_title_not_found(service):
 
     assert service.find_by_title("Inconnu") is None
 
-
-# CRUD
 
 def test_create_movie_success(service):
     movie = make_movie(id_movie=None)
@@ -151,8 +146,6 @@ def test_delete_movie_not_found(service):
 
     assert service.delete_movie(999) is False
 
-
-# OMdb
 
 def test_search_omdb_delegates_to_client(service):
     results = [{"Title": "Inception", "imdbID": "tt1375666"}]

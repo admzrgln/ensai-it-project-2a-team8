@@ -54,7 +54,7 @@ def test_list_all_tariffs_refused_for_customer(mock_service):
 
 @patch(SERVICE)
 def test_create_tariff(mock_service):
-    mock_service.create_tariff.side_effect = lambda t: t  # renvoie le tarif reçu
+    mock_service.create_tariff.side_effect = lambda t: t
 
     response = client.post(f"{BASE_URL}/", json=senior_data, headers=ADMIN)
 
@@ -88,7 +88,7 @@ def test_create_tariff_business_error_gives_400(mock_service):
 
 @patch(SERVICE)
 def test_create_tariff_invalid_body_gives_422(mock_service):
-    response = client.post(f"{BASE_URL}/", json={"code": "x"}, headers=ADMIN)  # label manquant
+    response = client.post(f"{BASE_URL}/", json={"code": "x"}, headers=ADMIN)
     assert response.status_code == 422
     mock_service.create_tariff.assert_not_called()
 
@@ -109,7 +109,7 @@ def test_update_tariff_uses_code_from_url(mock_service):
 
     assert response.status_code == 200
     sent = mock_service.update_tariff.call_args.args[0]
-    assert sent.code == "student"  # le code de l'URL fait foi
+    assert sent.code == "student"
     assert sent.price == 5.0
 
 
