@@ -36,14 +36,14 @@ def make_booking(id_customer: int = 10, id_booking: int | None = 5) -> Booking:
     ])
 
 
-# --- Authentification ----------------------------------------------------------
 def test_booking_without_token_is_refused():
     response = client.post(f"{BASE_URL}/", json=booking_request)
     assert response.status_code in (401, 403)
 
 
 def test_booking_with_invalid_token_is_refused():
-    response = client.post(f"{BASE_URL}/", json=booking_request, headers={"Authorization": "Bearer abc"})
+    response = client.post(f"{BASE_URL}/",
+                           json=booking_request, headers={"Authorization": "Bearer abc"})
     assert response.status_code == 403
 
 
@@ -54,7 +54,6 @@ def test_admin_cannot_book(mock_service):
     mock_service.book.assert_not_called()
 
 
-# --- POST /bookings/quote ---------------------------------------------------------
 @patch(SERVICE)
 def test_quote_returns_total_without_booking(mock_service):
     mock_service.quote.return_value = make_booking(id_booking=None)
@@ -67,7 +66,6 @@ def test_quote_returns_total_without_booking(mock_service):
     mock_service.book.assert_not_called()
 
 
-# --- POST /bookings/ --------------------------------------------------------------
 @patch(SERVICE)
 def test_create_booking(mock_service):
     mock_service.book.return_value = make_booking()
@@ -89,7 +87,7 @@ def test_create_booking_passes_jwt_user_and_guests_to_service(mock_service):
     client.post(f"{BASE_URL}/", json=booking_request, headers=CUSTOMER)
 
     id_customer, id_screening, include_myself, customer_is_student, guests = mock_service.book.call_args.args
-    assert id_customer == 10  # lu dans le token, pas dans le body
+    assert id_customer == 10
     assert (id_screening, include_myself, customer_is_student) == (1, True, True)
     assert len(guests) == 1
     assert isinstance(guests[0], Ticket)
@@ -117,16 +115,17 @@ def test_create_booking_not_enough_seats_gives_409(mock_service):
 
 @patch(SERVICE)
 def test_create_booking_invalid_body_gives_422(mock_service):
-    bad = {**booking_request, "guests": [{"first_name": "Kid", "last_name": "F", "date_of_birth": "pas une date"}]}
+    bad = {**booking_request, "guests": [{"first_name": "Kid",
+                                         "last_name": "F", "date_of_birth": "pas une date"}]}
     response = client.post(f"{BASE_URL}/", json=bad, headers=CUSTOMER)
     assert response.status_code == 422
     mock_service.book.assert_not_called()
 
 
-# --- GET /bookings/me et /bookings/{id} ---------------------------------------------
 @patch(SERVICE)
 def test_my_bookings(mock_service):
-    mock_service.find_by_customer.return_value = [make_booking(id_booking=5), make_booking(id_booking=6)]
+    mock_service.find_by_customer.return_value = [make_booking(id_booking=5),
+                                                  make_booking(id_booking=6)]
 
     response = client.get(f"{BASE_URL}/me", headers=CUSTOMER)
 
@@ -159,7 +158,6 @@ def test_booking_by_id_not_found(mock_service):
     assert response.status_code == 404
 
 
-# --- DELETE /bookings/{id} ------------------------------------------------------------
 @patch(SERVICE)
 def test_cancel_booking(mock_service):
     mock_service.cancel.return_value = True

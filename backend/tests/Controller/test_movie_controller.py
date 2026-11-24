@@ -15,7 +15,6 @@ client = TestClient(app)
 
 BASE_URL = "/movies"
 
-# Création / modification / suppression de films : réservées aux administrateurs
 jwt = JwtService()
 ADMIN = {"Authorization": f"Bearer {jwt.encode_jwt(1, 'admin').access_token}"}
 CUSTOMER = {"Authorization": f"Bearer {jwt.encode_jwt(10, 'customer').access_token}"}
@@ -29,7 +28,6 @@ movie_data = {
 }
 
 
-# 1. GET /movies/ : récupérer tous les films
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_find_all_movies(mock_service):
     mock_service.find_all.return_value = [movie_data]
@@ -42,7 +40,6 @@ def test_find_all_movies(mock_service):
     mock_service.find_all.assert_called_once()
 
 
-# 2. GET /movies/search/{title} : rechercher par titre
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_movie_by_title(mock_service):
     mock_service.find_by_title.return_value = movie_data
@@ -54,7 +51,6 @@ def test_movie_by_title(mock_service):
     mock_service.find_by_title.assert_called_once_with("Inception")
 
 
-# 3. GET /movies/{id_movie} : rechercher par ID
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_movie_by_id(mock_service):
     mock_service.find_by_id.return_value = movie_data
@@ -66,7 +62,6 @@ def test_movie_by_id(mock_service):
     mock_service.find_by_id.assert_called_once_with(1)
 
 
-# 4. POST /movies/ : créer un film
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_create_movie(mock_service):
     mock_service.create_movie.return_value = True
@@ -78,7 +73,6 @@ def test_create_movie(mock_service):
     mock_service.create_movie.assert_called_once()
 
 
-# 5. PUT /movies/{id_movie} : modifier un film
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_update_movie(mock_service):
     mock_service.update_movie.return_value = True
@@ -93,7 +87,6 @@ def test_update_movie(mock_service):
     mock_service.update_movie.assert_called_once()
 
 
-# 6. DELETE /movies/{id_movie} : supprimer un film
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_delete_movie(mock_service):
     mock_service.delete_movie.return_value = True
@@ -105,7 +98,6 @@ def test_delete_movie(mock_service):
     mock_service.delete_movie.assert_called_once_with(1)
 
 
-# 7. GET : film inexistant
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_movie_not_found(mock_service):
     mock_service.find_by_id.return_value = None
@@ -116,7 +108,6 @@ def test_movie_not_found(mock_service):
     assert response.json()["detail"] == "Movie not found"
 
 
-# 8. POST : durée invalide (texte au lieu d'un entier)
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_create_movie_invalid_duration(mock_service):
     invalid_data = movie_data.copy()
@@ -128,7 +119,6 @@ def test_create_movie_invalid_duration(mock_service):
     mock_service.create_movie.assert_not_called()
 
 
-# 9. PUT : film inexistant
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_update_movie_not_found(mock_service):
     mock_service.update_movie.return_value = False
@@ -138,7 +128,6 @@ def test_update_movie_not_found(mock_service):
     assert response.status_code == 404
 
 
-# 10. DELETE : film inexistant
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_delete_movie_not_found(mock_service):
     mock_service.delete_movie.return_value = False
@@ -148,8 +137,6 @@ def test_delete_movie_not_found(mock_service):
     assert response.status_code == 404
 
 
-# --- Cas supplémentaires (coverage 100 %) ---------------------------------------
-# 11. GET /movies/search/{title} : titre inconnu
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_movie_by_title_not_found(mock_service):
     mock_service.find_by_title.return_value = None
@@ -160,7 +147,6 @@ def test_movie_by_title_not_found(mock_service):
     assert response.json()["detail"] == "Movie not found"
 
 
-# 12. POST : la création échoue côté service
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_create_movie_failure(mock_service):
     mock_service.create_movie.return_value = False
@@ -171,7 +157,6 @@ def test_create_movie_failure(mock_service):
     assert response.json()["detail"] == "Invalid data or creation failed"
 
 
-# 13. GET /movies/omdb/search/{title}
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_search_omdb(mock_service):
     mock_service.search_omdb.return_value = [{"imdb_id": "tt1375666", "title": "Inception"}]
@@ -193,7 +178,6 @@ def test_search_omdb_service_error(mock_service):
     assert response.json()["detail"] == "OMDb service error"
 
 
-# 14. POST /movies/omdb/import/{imdb_id}
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_import_from_omdb(mock_service):
     mock_service.import_from_omdb.return_value = {"id_movie": 1, **movie_data}
@@ -228,7 +212,6 @@ def test_import_from_omdb_failure(mock_service):
     assert response.json()["detail"] == "Import failed"
 
 
-# --- Routes protégées : seuls les administrateurs peuvent modifier le catalogue ---
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_create_movie_without_token_is_refused(mock_service):
     response = client.post(f"{BASE_URL}/", json=movie_data)
@@ -256,7 +239,6 @@ def test_customer_cannot_delete_movie(mock_service):
     mock_service.delete_movie.assert_not_called()
 
 
-# 15. Les routes OMDb sont réservées aux administrateurs
 @patch("backend.src.Controller.MovieController.movie_service")
 def test_customer_cannot_search_omdb(mock_service):
     response = client.get(f"{BASE_URL}/omdb/search/Inception", headers=CUSTOMER)

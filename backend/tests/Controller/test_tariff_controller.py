@@ -22,7 +22,6 @@ CUSTOMER = {"Authorization": f"Bearer {jwt.encode_jwt(10, 'customer').access_tok
 senior_data = {"code": "senior", "label": "65 ans et +", "price": 5.5, "min_age": 65}
 
 
-# --- GET -----------------------------------------------------------------------
 @patch(SERVICE)
 def test_list_active_tariffs_is_public(mock_service):
     mock_service.find_all.return_value = [Tariff("child", "Moins de 14 ans", 4.5, max_age=13),
@@ -53,7 +52,6 @@ def test_list_all_tariffs_refused_for_customer(mock_service):
     mock_service.find_all.assert_not_called()
 
 
-# --- POST ----------------------------------------------------------------------
 @patch(SERVICE)
 def test_create_tariff(mock_service):
     mock_service.create_tariff.side_effect = lambda t: t  # renvoie le tarif reçu
@@ -101,13 +99,13 @@ def test_create_tariff_code_too_long_gives_422(mock_service):
     assert response.status_code == 422
 
 
-# --- PUT -----------------------------------------------------------------------
 @patch(SERVICE)
 def test_update_tariff_uses_code_from_url(mock_service):
     mock_service.update_tariff.side_effect = lambda t: t
 
-    response = client.put(f"{BASE_URL}/student", json={"code": "autre", "label": "Étudiant·e", "price": 5.0,
-                                                       "requires_student": True}, headers=ADMIN)
+    response = client.put(f"{BASE_URL}/student",
+                          json={"code": "autre", "label": "Étudiant·e", "price": 5.0,
+                                "requires_student": True}, headers=ADMIN)
 
     assert response.status_code == 200
     sent = mock_service.update_tariff.call_args.args[0]
@@ -128,7 +126,6 @@ def test_update_tariff_refused_for_customer(mock_service):
     mock_service.update_tariff.assert_not_called()
 
 
-# --- DELETE (désactivation) -----------------------------------------------------
 @patch(SERVICE)
 def test_deactivate_tariff(mock_service):
     mock_service.deactivate_tariff.return_value = True
@@ -141,7 +138,8 @@ def test_deactivate_tariff(mock_service):
 
 @patch(SERVICE)
 def test_deactivate_full_tariff_gives_400(mock_service):
-    mock_service.deactivate_tariff.side_effect = TariffError("The 'full' tariff can't be deactivated")
+    mock_service.deactivate_tariff.side_effect = TariffError(
+        "The 'full' tariff can't be deactivated")
     assert client.delete(f"{BASE_URL}/full", headers=ADMIN).status_code == 400
 
 

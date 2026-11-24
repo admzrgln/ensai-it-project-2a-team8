@@ -39,12 +39,12 @@ def make_customer(**overrides) -> Customer:
     return Customer(**data)
 
 
-# Fausse grille tarifaire : le message d'inscription liste les tarifs auxquels le client a droit
 FAKE_GRID = [
     Tariff("ensai", "ENSAI Student", 7.8, requires_ensai=True),
     Tariff("child", "Under 14", 6.0, max_age=13),
     Tariff("senior", "Over 65", 9.5, min_age=65),
-    Tariff("wed", "Wednesday afternoon", 6.5, weekday=2, time_from=time(12, 0), time_until=time(18, 0)),
+    Tariff("wed", "Wednesday afternoon", 6.5, weekday=2,
+           time_from=time(12, 0), time_until=time(18, 0)),
     Tariff("full", "Full price", 11.0),
 ]
 
@@ -67,9 +67,6 @@ def years_ago(years: int) -> date:
     return today.replace(year=today.year - years, day=min(today.day, 28))
 
 
-# =====================================================================================
-# GET /users/ et /users/search/{email} : administrateurs uniquement
-# =====================================================================================
 @patch(SERVICE)
 def test_find_all_users_admin(mock_service):
     mock_service.find_all.return_value = [make_admin(), make_customer()]
@@ -113,9 +110,6 @@ def test_user_by_email_refused_for_customer(mock_service):
     mock_service.find_by_email.assert_not_called()
 
 
-# =====================================================================================
-# GET /users/{id} : son propre compte, ou n'importe lequel pour un admin
-# =====================================================================================
 @patch(SERVICE)
 def test_customer_can_see_own_account(mock_service):
     mock_service.find_by_id.return_value = make_customer()
@@ -152,9 +146,6 @@ def test_user_by_id_refused_without_token():
     assert client.get(f"{BASE_URL}/2").status_code in (401, 403)
 
 
-# =====================================================================================
-# POST /users/ : inscription publique (toujours un client)
-# =====================================================================================
 @patch(SERVICE)
 def test_signup_creates_a_customer(mock_service):
     mock_service.create_user.return_value = make_customer(date_of_birth=years_ago(30))
@@ -210,8 +201,10 @@ def test_signup_senior_gets_over_65_tariff(mock_service):
 
 @patch(SERVICE)
 def test_signup_ensai_student_message(mock_service):
-    mock_service.create_user.return_value = make_customer(date_of_birth=years_ago(20), is_ensai_student=True)
-    message = client.post(f"{BASE_URL}/", json={**signup_data, "email": "louise@ensai.fr"}).json()["message"]
+    mock_service.create_user.return_value = make_customer(
+        date_of_birth=years_ago(20), is_ensai_student=True)
+    message = client.post(f"{BASE_URL}/",
+                          json={**signup_data, "email": "louise@ensai.fr"}).json()["message"]
     assert "ENSAI Student" in message
     assert "Your student ID will be checked at the ticket office." in message
 
@@ -240,7 +233,8 @@ def test_signup_prices_come_from_the_grid(mock_service, tariff_service):
 
 @patch(SERVICE)
 def test_signup_schedule_tariffs_are_not_listed(mock_service):
-    """Les tarifs liés à un horaire (ex. mercredi après-midi) dépendent de la séance, pas du client."""
+    """Les tarifs liés à un horaire
+    (ex. mercredi après-midi) dépendent de la séance, pas du client."""
     mock_service.create_user.return_value = make_customer(date_of_birth=years_ago(30))
     message = client.post(f"{BASE_URL}/", json=signup_data).json()["message"]
     assert "Wednesday afternoon" not in message
@@ -275,9 +269,6 @@ def test_signup_invalid_body_gives_422(mock_service):
     mock_service.create_user.assert_not_called()
 
 
-# =====================================================================================
-# POST /users/admin : création d'un administrateur (admin uniquement)
-# =====================================================================================
 @patch(SERVICE)
 def test_create_admin(mock_service):
     mock_service.create_user.return_value = make_admin()
@@ -301,14 +292,12 @@ def test_create_admin_failure_gives_400(mock_service):
     assert client.post(f"{BASE_URL}/admin", json=signup_data, headers=ADMIN).status_code == 400
 
 
-# =====================================================================================
-# POST /users/login
-# =====================================================================================
 @patch(SERVICE)
 def test_login_returns_a_valid_jwt(mock_service):
     mock_service.authenticate.return_value = make_customer()
 
-    response = client.post(f"{BASE_URL}/login", json={"email": "louise@mail.fr", "password": "motdepasse123"})
+    response = client.post(f"{BASE_URL}/login",
+                           json={"email": "louise@mail.fr", "password": "motdepasse123"})
 
     assert response.status_code == 200
     payload = jwt.validate_user_jwt(response.json()["access_token"])
@@ -320,15 +309,13 @@ def test_login_returns_a_valid_jwt(mock_service):
 def test_login_wrong_credentials(mock_service):
     mock_service.authenticate.return_value = None
 
-    response = client.post(f"{BASE_URL}/login", json={"email": "louise@mail.fr", "password": "faux"})
+    response = client.post(f"{BASE_URL}/login",
+                           json={"email": "louise@mail.fr", "password": "faux"})
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid email or password"
 
 
-# =====================================================================================
-# PUT /users/{id}
-# =====================================================================================
 update_data = {**signup_data, "role": "customer", "is_ensai_student": False}
 
 
@@ -336,7 +323,8 @@ update_data = {**signup_data, "role": "customer", "is_ensai_student": False}
 def test_customer_updates_own_account(mock_service):
     mock_service.update_user.return_value = make_customer(first_name="Lou")
 
-    response = client.put(f"{BASE_URL}/2", json={**update_data, "first_name": "Lou"}, headers=LOUISE)
+    response = client.put(f"{BASE_URL}/2", json={**update_data,
+                          "first_name": "Lou"}, headers=LOUISE)
 
     assert response.status_code == 200
     assert response.json()["message"] == "User updated successfully"
@@ -402,9 +390,6 @@ def test_admin_cannot_set_an_invalid_role(mock_service):
     mock_service.update_user.assert_not_called()
 
 
-# =====================================================================================
-# DELETE /users/{id}
-# =====================================================================================
 @patch(SERVICE)
 def test_customer_deletes_own_account(mock_service):
     mock_service.delete_user.return_value = True

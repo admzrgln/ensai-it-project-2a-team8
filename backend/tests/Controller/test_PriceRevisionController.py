@@ -1,8 +1,3 @@
-"""Unit tests of the /price-revisions routes.
-
-The service is replaced by a mock: we only test what the Controller does
-(admin-only access, validation of the body, service errors -> HTTP codes, JSON output).
-"""
 from datetime import datetime
 from unittest.mock import patch
 
@@ -27,7 +22,6 @@ ADMIN = {"Authorization": f"Bearer {jwt.encode_jwt(1, 'admin').access_token}"}
 CUSTOMER = {"Authorization": f"Bearer {jwt.encode_jwt(10, 'customer').access_token}"}
 
 
-# --- GET /price-revisions/ --------------------------------------------------------
 @patch(SERVICE)
 def test_list_revisions(mock_service):
     mock_service.find_all.return_value = [
@@ -54,7 +48,6 @@ def test_list_revisions_empty(mock_service):
     assert response.json() == []
 
 
-# --- PUT /price-revisions/{year} --------------------------------------------------
 @patch(SERVICE)
 def test_plan_revision(mock_service):
     mock_service.plan_revision.return_value = PriceRevision(2027, 2.5)
@@ -80,7 +73,8 @@ def test_plan_revision_business_error_gives_400(mock_service):
 
 @patch(SERVICE)
 def test_plan_revision_already_applied_gives_400(mock_service):
-    mock_service.plan_revision.side_effect = PriceRevisionError("The 2027 revision has already been applied")
+    mock_service.plan_revision.side_effect = PriceRevisionError(
+        "The 2027 revision has already been applied")
 
     response = client.put(f"{BASE_URL}/2027", json={"rate_percent": 2.0}, headers=ADMIN)
 
@@ -112,7 +106,6 @@ def test_plan_revision_year_not_int_gives_422(mock_service):
     mock_service.plan_revision.assert_not_called()
 
 
-# --- DELETE /price-revisions/{year} -----------------------------------------------
 @patch(SERVICE)
 def test_cancel_revision(mock_service):
     mock_service.cancel_revision.return_value = True
@@ -126,7 +119,8 @@ def test_cancel_revision(mock_service):
 
 @patch(SERVICE)
 def test_cancel_revision_not_found_gives_404(mock_service):
-    mock_service.cancel_revision.side_effect = PriceRevisionError("Revision 2027 not found or already applied")
+    mock_service.cancel_revision.side_effect = PriceRevisionError(
+        "Revision 2027 not found or already applied")
 
     response = client.delete(f"{BASE_URL}/2027", headers=ADMIN)
 
@@ -134,7 +128,6 @@ def test_cancel_revision_not_found_gives_404(mock_service):
     assert response.json()["detail"] == "Revision 2027 not found or already applied"
 
 
-# --- Accès réservé aux administrateurs --------------------------------------------
 @pytest.mark.parametrize(
     ("method", "url", "body"),
     [

@@ -45,4 +45,3 @@ def test_due_price_revisions_are_applied_at_startup(app):
             pass
 
     service_cls.return_value.apply_due_revisions.assert_called_once_with()
-

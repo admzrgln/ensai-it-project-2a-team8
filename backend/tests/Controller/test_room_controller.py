@@ -14,11 +14,9 @@ client = TestClient(app)
 
 BASE_URL = "/rooms"
 
-# Les salles du Cinéville Bruz sont fixes : l'API permet seulement de les consulter.
 room = Room(number="A1", capacity=150, id_room=1)
 
 
-# 1. GET /rooms/ : récupérer toutes les salles
 @patch("backend.src.Controller.RoomController.room_service")
 def test_find_all_rooms(mock_service):
     mock_service.find_all.return_value = [room, Room(number="A2", capacity=80, id_room=2)]
@@ -41,7 +39,6 @@ def test_find_all_rooms_empty(mock_service):
     assert response.json() == []
 
 
-# 2. GET /rooms/{id_room} : rechercher par ID
 @patch("backend.src.Controller.RoomController.room_service")
 def test_room_by_id(mock_service):
     mock_service.find_by_id.return_value = room
@@ -54,7 +51,6 @@ def test_room_by_id(mock_service):
     mock_service.find_by_id.assert_called_once_with(1)
 
 
-# 3. GET : salle inexistante
 @patch("backend.src.Controller.RoomController.room_service")
 def test_room_not_found(mock_service):
     mock_service.find_by_id.return_value = None
@@ -65,7 +61,6 @@ def test_room_not_found(mock_service):
     assert response.json()["detail"] == "Room not found"
 
 
-# 4. GET : identifiant qui n'est pas un entier
 @patch("backend.src.Controller.RoomController.room_service")
 def test_room_by_id_invalid_id(mock_service):
     response = client.get(f"{BASE_URL}/abc")
@@ -74,7 +69,6 @@ def test_room_by_id_invalid_id(mock_service):
     mock_service.find_by_id.assert_not_called()
 
 
-# 5. Les salles ne peuvent pas être créées, modifiées ni supprimées via l'API
 @pytest.mark.parametrize(
     ("method", "url"),
     [

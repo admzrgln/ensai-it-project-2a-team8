@@ -16,7 +16,6 @@ from backend.src.Controller.JWTBearer import (
     require_customer,
 )
 
-# Petite application de test avec une route par niveau de protection
 app = FastAPI()
 
 
@@ -51,7 +50,6 @@ def raw_token(payload: dict) -> str:
     return jwt.encode(payload, jwt_service.secret, algorithm=jwt_service.algorithm)
 
 
-# --- Token valide -------------------------------------------------------------------
 def test_valid_token_returns_payload():
     response = client.get("/me", headers=bearer(token_for(3, "customer")))
     assert response.status_code == 200
@@ -59,7 +57,6 @@ def test_valid_token_returns_payload():
     assert response.json()["role"] == "customer"
 
 
-# --- Tokens refusés -------------------------------------------------------------------
 def test_missing_header_is_refused():
     assert client.get("/me").status_code in (401, 403)
 
@@ -78,14 +75,16 @@ def test_malformed_token():
 
 
 def test_token_without_expiry_gives_unknown_error():
-    """Signature correcte mais pas de champ expiry_timestamp -> erreur imprévue."""
+    """Signature correcte
+    mais pas de champ expiry_timestamp -> erreur imprévue."""
     response = client.get("/me", headers=bearer(raw_token({"user_id": 3})))
     assert response.status_code == 403
     assert response.json()["detail"] == "Unknown error"
 
 
 def test_no_credentials_when_auto_error_disabled():
-    """Avec auto_error=False, HTTPBearer renvoie None au lieu de lever : c'est JWTBearer qui refuse."""
+    """Avec auto_error=False,
+    HTTPBearer renvoie None au lieu de lever : c'est JWTBearer qui refuse."""
     request = Request({"type": "http", "method": "GET", "path": "/", "headers": []})
     with pytest.raises(HTTPException) as error:
         asyncio.run(JWTBearer(auto_error=False)(request))
@@ -93,7 +92,6 @@ def test_no_credentials_when_auto_error_disabled():
     assert error.value.detail == "Invalid authorization code."
 
 
-# --- Rôles ---------------------------------------------------------------------------
 def test_admin_route_accepts_admin():
     assert client.get("/admin", headers=bearer(token_for(1, "admin"))).status_code == 200
 
