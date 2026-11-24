@@ -35,7 +35,7 @@ class AccountingReportDao(metaclass=Singleton):
 
     @log
     def find_movie_revenues(self, period_start: date, period_end: date) -> list[MovieRevenue]:
-         """Revenue and tickets sold per movie, for tickets SOLD in [period_start, period_end].
+        """Revenue and tickets sold per movie, for tickets SOLD in [period_start, period_end].
 
         Rules:
         - one row of `ticket` = one seat sold; ticket.price is the price actually paid

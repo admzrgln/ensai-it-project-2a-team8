@@ -23,17 +23,6 @@ readme = "README.md"
 license = {text = "MIT"}
 
 
-[tool.pdm]
-distribution = false
-
-
-[tool.pdm.scripts]
-lint = "ruff check"
-format = "ruff format"
-test = "pytest --cov=backend/src --cov-report=term-missing"
-start = "pdm run __main__.py"
-typecheck = "pyrefly check"
-
 [tool.ruff]
 line-length = 120
 
@@ -46,6 +35,17 @@ project-excludes = ['.venv/**/*']
 search_path = [
     "."
 ]
+
+[tool.pdm]
+distribution = false
+
+
+[tool.pdm.scripts]
+lint = "ruff check"
+format = "ruff format"
+test = "pytest --cov=backend/src --cov-report=term-missing"
+start = "pdm run __main__.py"
+typecheck = "pyrefly check"
 
 [dependency-groups]
 test = [
@@ -61,6 +61,8 @@ typing = [
     "types-requests>=2.33.0.20260712",
     "types-psycopg2>=2.9.21.20260724",
     "pyrefly>=1.2.0",
+    "mypy>=2.4.1",
+    "types-PyYAML>=6.0.12.20261122",
 ]
 
 [tool.pytest.ini_options]

@@ -1,4 +1,3 @@
-from datetime import date
 
 from backend.src.DAO.DBConnector import DBConnector
 from backend.src.Model.Booking import Booking

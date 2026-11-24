@@ -39,7 +39,7 @@ class AccountingReportModel(BaseModel):
     total_amount: float
     tickets_sold: int
     average_ticket_price: float
-    occupancy_rate: float  # in %, over the screenings already started in the period
+    occupancy_rate: float
     movie_revenues: list[MovieRevenueModel]
     movie_occupancies: list[MovieOccupancyModel]
 
