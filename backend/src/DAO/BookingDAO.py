@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from backend.src.DAO.DBConnector import DBConnector
 from backend.src.Model.Booking import Booking
+from backend.src.Model.BookingStatus import BookingStatus
 from backend.src.Model.Ticket import Ticket
 from utils.log_utils import get_logger, log
 from utils.singleton import Singleton
@@ -81,7 +82,7 @@ class BookingDao(metaclass=Singleton):
             id_customer=row["id_customer"],
             id_screening=row["id_screening"],
             booking_date=row["booking_date"],
-            status=row["status"],
+            status=BookingStatus(row["status"]),
             tickets=tickets,
         )
 

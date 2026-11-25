@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from datetime import date
 
+    from backend.src.Model.Role import Role
+
 
 class User(ABC):
     """Abstract user of the application (an Administrator or a Customer).
@@ -24,8 +26,8 @@ class User(ABC):
         Password: in clear text when the account is created, then its hash.
     date_of_birth : date or None
         Date of birth.
-    role : str
-        "admin" or "customer".
+    role : Role
+        Role.ADMIN or Role.CUSTOMER.
     salt : str or None, optional
         Random salt used to hash the password.
     """
@@ -38,7 +40,7 @@ class User(ABC):
         email: str,
         password: str,
         date_of_birth: date | None,
-        role: str,
+        role: Role,
         salt: str | None = None,
     ) -> None:
         self.id_user = id_user

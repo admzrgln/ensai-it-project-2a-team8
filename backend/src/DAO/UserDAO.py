@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 from backend.src.DAO.DBConnector import DBConnector
 from backend.src.Model.Administrator import Administrator
 from backend.src.Model.Customer import Customer
+from backend.src.Model.Role import Role
 from utils.log_utils import get_logger, log
 from utils.singleton import Singleton
 
@@ -29,9 +30,9 @@ class UserDao(metaclass=Singleton):
         Returns
         -------
         User
-            An Administrator if the role is "admin", a Customer otherwise.
+            An Administrator if the role is Role.ADMIN, a Customer otherwise.
         """
-        if row["role"] == "admin":
+        if row["role"] == Role.ADMIN:
             return Administrator(
                 id_user=row["id_user"],
                 first_name=row["first_name"],

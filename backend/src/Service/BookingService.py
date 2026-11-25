@@ -7,7 +7,9 @@ from backend.src.DAO.BookingDAO import BookingDao
 from backend.src.DAO.ScreeningDAO import ScreeningDao
 from backend.src.DAO.UserDAO import UserDao
 from backend.src.Model.Booking import Booking
+from backend.src.Model.BookingStatus import BookingStatus
 from backend.src.Model.Customer import Customer
+from backend.src.Model.Role import Role
 from backend.src.Model.Ticket import Ticket
 from backend.src.Service.PriceRevisionService import PriceRevisionService
 from backend.src.Service.TariffService import TariffError, TariffService
@@ -59,7 +61,7 @@ class BookingService:
             If the user does not exist or is not a customer.
         """
         customer = self.user_dao.find_by_id(id_customer)
-        if customer is None or customer.role != "customer" or not isinstance(customer, Customer):
+        if customer is None or customer.role != Role.CUSTOMER or not isinstance(customer, Customer):
             raise BookingError("Only customers can book a screening")
         return customer
 
@@ -363,7 +365,7 @@ class BookingService:
         booking = self.booking_dao.find_by_id(id_booking)
         if booking is None or booking.id_customer != id_customer:
             raise BookingError("Booking not found")
-        if booking.status != "confirmed":
+        if booking.status != BookingStatus.CONFIRMED:
             raise BookingError("This booking is already cancelled")
         screening = self.screening_dao.find_by_id(booking.id_screening)
         if screening is not None and screening.date_time <= datetime.now():

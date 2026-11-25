@@ -8,6 +8,7 @@ from backend.src.DAO.MovieDAO import MovieDao
 from backend.src.DAO.RoomDAO import RoomDao
 from backend.src.DAO.ScreeningDAO import CLEANING_BUFFER_MINUTES, ScreeningDao
 from backend.src.DAO.UserDAO import UserDao
+from backend.src.Model.Role import Role
 from utils.log_utils import log
 
 if TYPE_CHECKING:
@@ -179,7 +180,7 @@ class ScreeningService:
         user = self.user_dao.find_by_id(screening.id_admin)
         if user is None:
             raise ScreeningError(f"User {screening.id_admin} not found")
-        if user.role != "admin":
+        if user.role != Role.ADMIN:
             raise ScreeningError(f"User {screening.id_admin} is not an administrator")
 
     def _check_overlap(self, screening: Screening, duration: int) -> None:

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from backend.src.DAO.AccountingReportDAO import AccountingReportDao
 from backend.src.DAO.UserDAO import UserDao
 from backend.src.Model.AccountingReport import AccountingReport
+from backend.src.Model.Role import Role
 from utils.log_utils import log
 
 if TYPE_CHECKING:
@@ -45,7 +46,7 @@ class AccountingReportService:
         user = self.user_dao.find_by_id(id_admin)
         if user is None:
             raise LookupError(f"User {id_admin} not found")
-        if user.role != "admin":
+        if user.role != Role.ADMIN:
             raise PermissionError("Only an administrator can generate an accounting report")
 
     @staticmethod

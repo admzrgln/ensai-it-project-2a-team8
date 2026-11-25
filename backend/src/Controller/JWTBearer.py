@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import DecodeError, ExpiredSignatureError
 
+from backend.src.Model.Role import Role
 from backend.src.Service.JWTService import JwtService
 
 jwt_service = JwtService()
@@ -76,7 +77,7 @@ def require_admin(payload: CurrentUser) -> TokenPayload:
     HTTPException
         403 if the user is not an administrator.
     """
-    if payload.get("role") != "admin":
+    if payload.get("role") != Role.ADMIN:
         raise HTTPException(status_code=403, detail="Admin only")
     return payload
 
@@ -99,7 +100,7 @@ def require_customer(payload: CurrentUser) -> TokenPayload:
     HTTPException
         403 if the user is not a customer.
     """
-    if payload.get("role") != "customer":
+    if payload.get("role") != Role.CUSTOMER:
         raise HTTPException(status_code=403, detail="Customers only")
     return payload
 

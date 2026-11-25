@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from backend.src.Model.Role import Role
 from backend.src.Model.User import User
 
 if TYPE_CHECKING:
@@ -39,7 +40,7 @@ class Administrator(User):
         date_of_birth: date | None,
         salt: str | None = None,
     ) -> None:
-        super().__init__(id_user, first_name, last_name, email, password, date_of_birth, role="admin", salt=salt)
+        super().__init__(id_user, first_name, last_name, email, password, date_of_birth, role=Role.ADMIN, salt=salt)
 
     def __str__(self) -> str:
         return (

@@ -34,7 +34,7 @@ class JwtService:
         user_id : int
             Identifier of the user.
         role : str or None, optional
-            Role of the user ("admin" or "customer"), stored in the token if given.
+            Role of the user (Role.ADMIN or Role.CUSTOMER), stored in the token if given.
 
         Returns
         -------

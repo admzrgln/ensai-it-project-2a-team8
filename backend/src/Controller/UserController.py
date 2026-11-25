@@ -9,6 +9,7 @@ from backend.src.Controller.JWTBearer import AdminPayload, CurrentUser, TokenPay
 from backend.src.Model.Administrator import Administrator
 from backend.src.Model.Customer import Customer
 from backend.src.Model.JWTResponse import JWTResponse
+from backend.src.Model.Role import Role
 from backend.src.Model.User import User
 from backend.src.Service.TariffService import TariffService
 from backend.src.Service.UserService import UserService
@@ -17,7 +18,7 @@ user_router = APIRouter(prefix="/users")
 user_service = UserService()
 tariff_service = TariffService()
 
-VALID_ROLES = {"admin", "customer"}
+VALID_ROLES = {role.value for role in Role}
 
 T = TypeVar("T")
 
@@ -127,7 +128,7 @@ def check_self_or_admin(id_user: int, current: TokenPayload) -> None:
     HTTPException
         403 if a customer acts on another account.
     """
-    if current["role"] != "admin" and current["user_id"] != id_user:
+    if current["role"] != Role.ADMIN and current["user_id"] != id_user:
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
@@ -326,8 +327,8 @@ async def update_user(id_user: int, user_data: UserUpdateModel, current: Current
         raise HTTPException(status_code=404, detail="User not found or update failed")
 
     # Only an administrator can change the role; otherwise the current role is kept
-    role = existing.role
-    if current["role"] == "admin" and user_data.role is not None:
+    role: str = existing.role
+    if current["role"] == Role.ADMIN and user_data.role is not None:
         role = user_data.role.lower()
         if role not in VALID_ROLES:
             raise HTTPException(status_code=400, detail="Role must be 'admin' or 'customer'")
@@ -341,7 +342,7 @@ async def update_user(id_user: int, user_data: UserUpdateModel, current: Current
     date_of_birth = _pick(user_data.date_of_birth, existing.date_of_birth)
 
     user_to_update: User
-    if role == "admin":
+    if role == Role.ADMIN:
         user_to_update = Administrator(
             id_user, first_name, last_name, email, password, date_of_birth, salt=existing.salt
         )

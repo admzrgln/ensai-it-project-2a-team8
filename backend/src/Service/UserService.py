@@ -77,22 +77,18 @@ class UserService:
             The user created, or None if the email is already used,
             the password is too weak or the insertion failed.
         """
-        # 1. The email must not be used yet (UNIQUE constraint)
         existing_user = self.user_dao.find_user_by_email(user.email)
         if existing_user is not None:
             return None
 
-        # 2. Rule of the analysis report: an ensai.fr address gives the ENSAI student status
         if isinstance(user, Customer) and user.email.lower().endswith("@ensai.fr"):
             user.is_ensai_student = True
 
-        # 3. The password must be strong enough
         try:
             check_password_strength(user.password)
         except Exception:
             return None
 
-        # 4. Create a salt and hash the password before the insertion
         user.salt = create_salt()
         user.password = hash_password(user.password, user.salt)
 
@@ -121,7 +117,6 @@ class UserService:
         if id_user is None:
             return None
 
-        # The email must not belong to ANOTHER account (otherwise error 500 on the UNIQUE constraint)
         other = self.user_dao.find_user_by_email(user.email)
         if other is not None and other.id_user != id_user:
             return None

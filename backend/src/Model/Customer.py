@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from backend.src.Model.Role import Role
 from backend.src.Model.User import User
 
 if TYPE_CHECKING:
@@ -42,8 +43,8 @@ class Customer(User):
         is_ensai_student: bool = False,
         salt: str | None = None,
     ) -> None:
-        # The role is always "customer"
-        super().__init__(id_user, first_name, last_name, email, password, date_of_birth, role="customer", salt=salt)
+        # The role is always Role.CUSTOMER
+        super().__init__(id_user, first_name, last_name, email, password, date_of_birth, role=Role.CUSTOMER, salt=salt)
         self.is_ensai_student = is_ensai_student
 
     def __str__(self) -> str:

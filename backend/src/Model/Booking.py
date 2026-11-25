@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from backend.src.Model.BookingStatus import BookingStatus
+
 if TYPE_CHECKING:
     from datetime import datetime
 
@@ -19,8 +21,8 @@ class Booking:
         Identifier of the screening.
     tickets : list of Ticket or None, optional
         Tickets of the booking (empty list by default).
-    status : str, optional
-        "confirmed" (default) or "cancelled".
+    status : BookingStatus, optional
+        BookingStatus.CONFIRMED (default) or BookingStatus.CANCELLED.
     booking_date : datetime or None, optional
         When the booking was made (filled by the database).
     id_booking : int or None, optional
@@ -32,7 +34,7 @@ class Booking:
         id_customer: int,
         id_screening: int,
         tickets: list[Ticket] | None = None,
-        status: str = "confirmed",
+        status: BookingStatus = BookingStatus.CONFIRMED,
         booking_date: datetime | None = None,
         id_booking: int | None = None,
     ) -> None:

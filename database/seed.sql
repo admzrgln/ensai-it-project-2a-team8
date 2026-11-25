@@ -14,11 +14,12 @@ VALUES
 INSERT INTO public.room
     (id_room, number, capacity)
 VALUES
-    (1, 1, 120),
-    (2, 2, 100),
-    (3, 3, 250),
-    (4, 4, 150),
-    (5, 5, 40);
+    (1, 1, 319),
+    (2, 2, 196),
+    (3, 3, 155),
+    (4, 4, 122),
+    (5, 5, 119),
+    (6, 6, 80);
 
 
 INSERT INTO public.app_user
@@ -36,9 +37,9 @@ VALUES
 INSERT INTO public.screening
     (id_screening, id_room, id_movie, id_admin, date_time, available_seats)
 VALUES
-    (1, 1, 1, 1, '2027-01-15 20:30:00', 120),
-    (2, 2, 3, 1, '2027-01-16 20:00:00', 100),
-    (3, 3, 2, 1, '2027-01-15 19:00:00', 250);
+    (1, 1, 1, 1, '2027-01-15 20:30:00', 319),
+    (2, 2, 3, 1, '2027-01-16 20:00:00', 196),
+    (3, 3, 2, 1, '2027-01-15 19:00:00', 155);
 
 
 INSERT INTO public.tariff
