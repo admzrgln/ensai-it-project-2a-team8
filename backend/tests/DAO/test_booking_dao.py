@@ -42,26 +42,47 @@ def dao():
 
 
 def booking_row(**overrides) -> dict:
-    row = {"id_booking": 5, "id_customer": 10, "id_screening": 1, "booking_date": BOOKED_AT,
-           "status": "confirmed", "seat_count": 2, "total_price": Decimal("13.50")}
+    row = {
+        "id_booking": 5,
+        "id_customer": 10,
+        "id_screening": 1,
+        "booking_date": BOOKED_AT,
+        "status": "confirmed",
+        "seat_count": 2,
+        "total_price": Decimal("13.50"),
+    }
     row.update(overrides)
     return row
 
 
 def ticket_row(**overrides) -> dict:
-    row = {"id_ticket": 7, "id_booking": 5, "first_name": "Thomas", "last_name": "E",
-           "date_of_birth": date(2004, 3, 1), "is_holder": True, "is_ensai_student": True,
-           "is_student": False, "tariff_code": "ensai", "price": Decimal("4.00")}
+    row = {
+        "id_ticket": 7,
+        "id_booking": 5,
+        "first_name": "Thomas",
+        "last_name": "E",
+        "date_of_birth": date(2004, 3, 1),
+        "is_holder": True,
+        "is_ensai_student": True,
+        "is_student": False,
+        "tariff_code": "ensai",
+        "price": Decimal("4.00"),
+    }
     row.update(overrides)
     return row
 
 
 def make_booking() -> Booking:
-    return Booking(id_customer=10, id_screening=1, tickets=[
-        Ticket("Thomas", "E", date(2004, 3, 1),
-               is_holder=True, is_ensai_student=True, tariff_code="ensai", price=4.0),
-        Ticket("Kid", "F", date(2018, 1, 1), tariff_code="child", price=4.5),
-    ])
+    return Booking(
+        id_customer=10,
+        id_screening=1,
+        tickets=[
+            Ticket(
+                "Thomas", "E", date(2004, 3, 1), is_holder=True, is_ensai_student=True, tariff_code="ensai", price=4.0
+            ),
+            Ticket("Kid", "F", date(2018, 1, 1), tariff_code="child", price=4.5),
+        ],
+    )
 
 
 def test_to_ticket_maps_columns_and_converts_decimal_to_float():
@@ -83,8 +104,7 @@ def test_to_booking_maps_columns():
 
 
 def test_find_by_id_found_loads_tickets(dao, sql_query):
-    sql_query.side_effect = [booking_row(),
-                             [ticket_row(), ticket_row(id_ticket=8, first_name="Kid")]]
+    sql_query.side_effect = [booking_row(), [ticket_row(), ticket_row(id_ticket=8, first_name="Kid")]]
 
     b = dao.find_by_id(5)
 
@@ -144,9 +164,12 @@ def test_insert_booking_ok(dao, cursor):
 
 
 def test_insert_booking_decreases_seats_by_number_of_tickets(dao, cursor):
-    cursor.fetchone.side_effect = [{"available_seats": 48}, {"id_booking": 5,
-                                   "booking_date": BOOKED_AT},
-                                   {"id_ticket": 7}, {"id_ticket": 8}]
+    cursor.fetchone.side_effect = [
+        {"available_seats": 48},
+        {"id_booking": 5, "booking_date": BOOKED_AT},
+        {"id_ticket": 7},
+        {"id_ticket": 8},
+    ]
     dao.insert_booking(make_booking())
 
     query, params = cursor.execute.call_args_list[0].args
@@ -156,17 +179,19 @@ def test_insert_booking_decreases_seats_by_number_of_tickets(dao, cursor):
 
 
 def test_insert_booking_saves_total_and_ticket_prices(dao, cursor):
-    cursor.fetchone.side_effect = [{"available_seats": 48},
-                                   {"id_booking": 5, "booking_date": BOOKED_AT},
-                                   {"id_ticket": 7}, {"id_ticket": 8}]
+    cursor.fetchone.side_effect = [
+        {"available_seats": 48},
+        {"id_booking": 5, "booking_date": BOOKED_AT},
+        {"id_ticket": 7},
+        {"id_ticket": 8},
+    ]
     dao.insert_booking(make_booking())
 
     booking_params = cursor.execute.call_args_list[1].args[1]
     assert booking_params["total"] == 8.5
     assert booking_params["seat_count"] == 2
     ticket_params = cursor.execute.call_args_list[3].args[1]
-    assert (ticket_params["first_name"],
-            ticket_params["tariff_code"], ticket_params["price"]) == ("Kid", "child", 4.5)
+    assert (ticket_params["first_name"], ticket_params["tariff_code"], ticket_params["price"]) == ("Kid", "child", 4.5)
 
 
 def test_insert_booking_not_enough_seats_writes_nothing(dao, cursor):
@@ -196,8 +221,7 @@ def test_insert_booking_without_returned_booking_row_is_an_error(dao, cursor):
 
 
 def test_insert_booking_without_returned_ticket_row_is_an_error(dao, cursor):
-    cursor.fetchone.side_effect = [{"available_seats": 48},
-                                   {"id_booking": 5, "booking_date": BOOKED_AT}, None]
+    cursor.fetchone.side_effect = [{"available_seats": 48}, {"id_booking": 5, "booking_date": BOOKED_AT}, None]
     with pytest.raises(RuntimeError, match="ticket was not created"):
         dao.insert_booking(make_booking())
     cursor.conn.close.assert_called_once()

@@ -42,16 +42,14 @@ def test_init_without_key_raises_key_error(monkeypatch):
 def test_search_returns_list_of_results(client):
     results = [
         {"Title": "Inception", "Year": "2010", "imdbID": "tt1375666", "Poster": "url1"},
-        {"Title": "Inception: The Cobol Job", "Year": "2010",
-         "imdbID": "tt5295894", "Poster": "url2"},
+        {"Title": "Inception: The Cobol Job", "Year": "2010", "imdbID": "tt5295894", "Poster": "url2"},
     ]
     with patch(REQUESTS_GET, return_value=fake_response({"Response": "True", "Search": results})):
         assert client.search("Inception") == results
 
 
 def test_search_sends_expected_request(client):
-    with patch(REQUESTS_GET, return_value=fake_response(
-            {"Response": "True", "Search": []})) as mock_get:
+    with patch(REQUESTS_GET, return_value=fake_response({"Response": "True", "Search": []})) as mock_get:
         client.search("Inception")
 
     mock_get.assert_called_once_with(

@@ -23,8 +23,9 @@ def service():
 
 
 def make_customer(**overrides) -> Customer:
-    data = dict(id_user=None, first_name="Louise", last_name="F", email="l@mail.fr",
-                password=PASSWORD, date_of_birth=BIRTH)
+    data = dict(
+        id_user=None, first_name="Louise", last_name="F", email="l@mail.fr", password=PASSWORD, date_of_birth=BIRTH
+    )
     data.update(overrides)
     return Customer(**data)
 

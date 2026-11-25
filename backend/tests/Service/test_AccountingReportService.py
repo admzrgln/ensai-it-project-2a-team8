@@ -42,10 +42,8 @@ class FakeReportDao:
             occupancies
             if occupancies is not None
             else [
-                MovieOccupancy(id_movie=1, title="Dune: Part Two",
-                               screenings=2, seats_offered=200, seats_sold=50),
-                MovieOccupancy(id_movie=2, title="Oppenheimer",
-                               screenings=1, seats_offered=100, seats_sold=40),
+                MovieOccupancy(id_movie=1, title="Dune: Part Two", screenings=2, seats_offered=200, seats_sold=50),
+                MovieOccupancy(id_movie=2, title="Oppenheimer", screenings=1, seats_offered=100, seats_sold=40),
             ]
         )
         self.calls = []
@@ -61,8 +59,7 @@ class FakeReportDao:
 
 
 def make_service(rows=None, occupancies=None) -> AccountingReportService:
-    return AccountingReportService(report_dao=FakeReportDao(rows, occupancies),
-                                   user_dao=FakeUserDao())
+    return AccountingReportService(report_dao=FakeReportDao(rows, occupancies), user_dao=FakeUserDao())
 
 
 def test_report_totals_match_fake_database():

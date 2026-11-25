@@ -61,8 +61,7 @@ def test_to_revision_keeps_applied_at():
 
 
 def test_find_all_maps_rows(dao, sql_query):
-    sql_query.return_value = [revision_row(year=2027,
-                              applied_at=APPLIED_AT), revision_row(year=2028)]
+    sql_query.return_value = [revision_row(year=2027, applied_at=APPLIED_AT), revision_row(year=2028)]
 
     revisions = dao.find_all()
 
@@ -156,7 +155,7 @@ def test_apply_due_applies_revisions_in_order(dao, cursor):
 
 def test_apply_due_locks_rows_and_skips_applied_revisions(dao, cursor):
     """FOR UPDATE + applied_at IS NULL : deux instances ne peuvent pas appliquer
-     deux fois la même révision."""
+    deux fois la même révision."""
     dao.apply_due(2028)
 
     select = cursor.execute.call_args_list[0].args[0]

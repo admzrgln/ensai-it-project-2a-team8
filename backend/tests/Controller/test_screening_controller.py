@@ -31,8 +31,14 @@ screening_data = {
 @patch("backend.src.Controller.ScreeningController.screening_service")
 def test_find_all_screenings(mock_service, mock_movie_service):
     mock_service.find_all.return_value = [
-        Screening(id_screening=1, id_room=1, id_movie=2, id_admin=3,
-                  date_time=datetime(2026, 12, 15, 20, 30), available_seats=120)
+        Screening(
+            id_screening=1,
+            id_room=1,
+            id_movie=2,
+            id_admin=3,
+            date_time=datetime(2026, 12, 15, 20, 30),
+            available_seats=120,
+        )
     ]
     mock_movie_service.find_by_id.return_value = MagicMock(title="Dune")
 
@@ -51,8 +57,14 @@ def test_find_all_screenings(mock_service, mock_movie_service):
 def test_find_all_screenings_unknown_movie(mock_service, mock_movie_service):
     """Si le film a été supprimé, la séance est quand même listée."""
     mock_service.find_all.return_value = [
-        Screening(id_screening=1, id_room=1, id_movie=99, id_admin=3,
-                  date_time=datetime(2026, 12, 15, 20, 30), available_seats=120)
+        Screening(
+            id_screening=1,
+            id_room=1,
+            id_movie=99,
+            id_admin=3,
+            date_time=datetime(2026, 12, 15, 20, 30),
+            available_seats=120,
+        )
     ]
     mock_movie_service.find_by_id.return_value = None
 
@@ -176,8 +188,7 @@ def test_create_screening_business_error(mock_service):
 
 @patch("backend.src.Controller.ScreeningController.screening_service")
 def test_update_screening_business_error(mock_service):
-    mock_service.update_screening.side_effect = ScreeningError(
-        "Room 1 has only 50 seats (100 requested)")
+    mock_service.update_screening.side_effect = ScreeningError("Room 1 has only 50 seats (100 requested)")
 
     response = client.put(f"{BASE_URL}/1", json=screening_data, headers=ADMIN)
 

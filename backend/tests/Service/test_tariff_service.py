@@ -72,8 +72,7 @@ def test_ensai_student_gets_cheapest_tariff(service):
 
 def test_cheapest_eligible_tariff_wins(service):
     """Un élève ENSAI de 10 ans a droit à 3 tarifs : on prend le moins cher (ENSAI, 4 €)."""
-    t = service.price_ticket(make_ticket(date_of_birth=date(2016, 5, 1),
-                             is_ensai_student=True), SCREENING_DT)
+    t = service.price_ticket(make_ticket(date_of_birth=date(2016, 5, 1), is_ensai_student=True), SCREENING_DT)
     assert (t.tariff_code, t.price) == ("ensai", 4.0)
 
 
@@ -96,8 +95,7 @@ def test_grid_passed_as_argument_does_not_read_database(service):
 
 
 def test_schedule_tariff_applies_only_at_the_right_time(service):
-    wednesday = Tariff("wed", "Mercredi après-midi", 6.5, weekday=2,
-                       time_from=time(12, 0), time_until=time(18, 0))
+    wednesday = Tariff("wed", "Mercredi après-midi", 6.5, weekday=2, time_from=time(12, 0), time_until=time(18, 0))
     grid = [wednesday, Tariff("full", "Plein tarif", FULL_PRICE)]
 
     on_wednesday = service.price_ticket(make_ticket(), datetime(2026, 12, 16, 14, 0), grid)
@@ -141,18 +139,20 @@ def test_free_tariff_is_valid(service):
     assert service.create_tariff(tariff) is tariff
 
 
-@pytest.mark.parametrize("tariff", [
-    pytest.param(Tariff("x", "X", -1.0), id="prix-negatif"),
-    pytest.param(Tariff("x", "X", None), id="sans-prix"),
-    pytest.param(Tariff("x", "X", 5.0, min_age=20, max_age=10), id="min-sup-max"),
-    pytest.param(Tariff("x", "X", 5.0, min_age=-3), id="age-negatif"),
-    pytest.param(Tariff("", "X", 5.0), id="code-vide"),
-    pytest.param(Tariff("x", "", 5.0), id="libelle-vide"),
-    pytest.param(Tariff("x", "X", 5.0, weekday=7), id="jour-invalide"),
-    pytest.param(Tariff("x", "X", 5.0, time_from=time(18, 0),
-                        time_until=time(12, 0)), id="horaires-inverses"),
-    pytest.param(Tariff("full", "Plein tarif", 9.0, max_age=13), id="plein-tarif-avec-condition"),
-])
+@pytest.mark.parametrize(
+    "tariff",
+    [
+        pytest.param(Tariff("x", "X", -1.0), id="prix-negatif"),
+        pytest.param(Tariff("x", "X", None), id="sans-prix"),
+        pytest.param(Tariff("x", "X", 5.0, min_age=20, max_age=10), id="min-sup-max"),
+        pytest.param(Tariff("x", "X", 5.0, min_age=-3), id="age-negatif"),
+        pytest.param(Tariff("", "X", 5.0), id="code-vide"),
+        pytest.param(Tariff("x", "", 5.0), id="libelle-vide"),
+        pytest.param(Tariff("x", "X", 5.0, weekday=7), id="jour-invalide"),
+        pytest.param(Tariff("x", "X", 5.0, time_from=time(18, 0), time_until=time(12, 0)), id="horaires-inverses"),
+        pytest.param(Tariff("full", "Plein tarif", 9.0, max_age=13), id="plein-tarif-avec-condition"),
+    ],
+)
 def test_invalid_tariff_refused(service, tariff):
     with pytest.raises(TariffError):
         service.create_tariff(tariff)

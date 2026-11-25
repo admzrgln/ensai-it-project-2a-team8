@@ -8,6 +8,7 @@ On met donc de FAUSSES valeurs, seulement si la variable n'existe pas déjà (se
 les vraies valeurs de votre .env ne sont jamais écrasées. Les tests remplacent de toute façon
 la base de données et l'API OMDb par des mocks.
 """
+
 import os
 
 os.environ.setdefault("JWT_SECRET", "test-secret-for-pytest-only-32-bytes!!")

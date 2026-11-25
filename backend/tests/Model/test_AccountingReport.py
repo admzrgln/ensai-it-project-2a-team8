@@ -18,8 +18,7 @@ def october_lines() -> list[MovieRevenue]:
 def test_movie_revenue_constructor():
     line = MovieRevenue(id_movie=1, title="Dune: Part Two", revenue=36.0, tickets_sold=4)
 
-    assert (line.id_movie, line.title,
-            line.revenue, line.tickets_sold) == (1, "Dune: Part Two", 36.0, 4)
+    assert (line.id_movie, line.title, line.revenue, line.tickets_sold) == (1, "Dune: Part Two", 36.0, 4)
 
 
 def test_movie_revenue_str_shows_two_decimals():
@@ -57,8 +56,7 @@ def test_report_without_sales_has_zero_totals_and_no_division_by_zero():
 
 def test_free_tickets_only_give_a_zero_average():
     """Invitations: tickets were sold for 0 € -> average 0, still no division error."""
-    report = AccountingReport(OCT_START, OCT_END, [MovieRevenue(1, "A",
-                                                                revenue=0.0, tickets_sold=5)])
+    report = AccountingReport(OCT_START, OCT_END, [MovieRevenue(1, "A", revenue=0.0, tickets_sold=5)])
 
     assert report.tickets_sold == 5
     assert report.average_ticket_price == 0.0

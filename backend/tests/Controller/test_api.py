@@ -21,9 +21,18 @@ def test_app_configuration(app):
     assert app.root_path == "/proxy/8001"
 
 
-@pytest.mark.parametrize("prefix", [
-    "/users", "/movies", "/rooms", "/screenings", "/bookings", "/tariffs", "/accounting-reports",
-])
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        "/users",
+        "/movies",
+        "/rooms",
+        "/screenings",
+        "/bookings",
+        "/tariffs",
+        "/accounting-reports",
+    ],
+)
 def test_all_routers_are_registered(app, prefix):
     paths = app.openapi()["paths"]
     assert any(path.startswith(prefix) for path in paths), f"aucune route {prefix}"

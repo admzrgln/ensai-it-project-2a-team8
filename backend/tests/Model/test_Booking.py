@@ -5,8 +5,7 @@ from backend.src.Model.Ticket import Ticket
 
 
 def make_ticket(price: float | None, **overrides) -> Ticket:
-    data = dict(first_name="A", last_name="B",
-                date_of_birth=date(1990, 1, 1), tariff_code="full", price=price)
+    data = dict(first_name="A", last_name="B", date_of_birth=date(1990, 1, 1), tariff_code="full", price=price)
     data.update(overrides)
     return Ticket(**data)
 
@@ -43,8 +42,9 @@ def test_total_price_ignores_unpriced_tickets():
 
 def test_to_dict_contains_computed_fields_and_tickets():
     booked_at = datetime(2026, 11, 4, 10, 0)
-    b = Booking(10, 1, tickets=[make_ticket(9.0, first_name="Louise"), make_ticket(4.5)],
-                booking_date=booked_at, id_booking=5)
+    b = Booking(
+        10, 1, tickets=[make_ticket(9.0, first_name="Louise"), make_ticket(4.5)], booking_date=booked_at, id_booking=5
+    )
     d = b.to_dict()
     assert d["id_booking"] == 5
     assert d["id_customer"] == 10

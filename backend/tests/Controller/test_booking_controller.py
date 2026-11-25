@@ -30,10 +30,15 @@ booking_request = {
 
 
 def make_booking(id_customer: int = 10, id_booking: int | None = 5) -> Booking:
-    return Booking(id_customer=id_customer, id_screening=1, id_booking=id_booking, tickets=[
-        Ticket("Louise", "F", date(2004, 3, 1), is_holder=True, tariff_code="student", price=6.0),
-        Ticket("Kid", "F", date(2018, 1, 1), tariff_code="child", price=4.5),
-    ])
+    return Booking(
+        id_customer=id_customer,
+        id_screening=1,
+        id_booking=id_booking,
+        tickets=[
+            Ticket("Louise", "F", date(2004, 3, 1), is_holder=True, tariff_code="student", price=6.0),
+            Ticket("Kid", "F", date(2018, 1, 1), tariff_code="child", price=4.5),
+        ],
+    )
 
 
 def test_booking_without_token_is_refused():
@@ -42,8 +47,7 @@ def test_booking_without_token_is_refused():
 
 
 def test_booking_with_invalid_token_is_refused():
-    response = client.post(f"{BASE_URL}/",
-                           json=booking_request, headers={"Authorization": "Bearer abc"})
+    response = client.post(f"{BASE_URL}/", json=booking_request, headers={"Authorization": "Bearer abc"})
     assert response.status_code == 403
 
 
@@ -115,8 +119,7 @@ def test_create_booking_not_enough_seats_gives_409(mock_service):
 
 @patch(SERVICE)
 def test_create_booking_invalid_body_gives_422(mock_service):
-    bad = {**booking_request, "guests": [{"first_name": "Kid",
-                                         "last_name": "F", "date_of_birth": "pas une date"}]}
+    bad = {**booking_request, "guests": [{"first_name": "Kid", "last_name": "F", "date_of_birth": "pas une date"}]}
     response = client.post(f"{BASE_URL}/", json=bad, headers=CUSTOMER)
     assert response.status_code == 422
     mock_service.book.assert_not_called()
@@ -124,8 +127,7 @@ def test_create_booking_invalid_body_gives_422(mock_service):
 
 @patch(SERVICE)
 def test_my_bookings(mock_service):
-    mock_service.find_by_customer.return_value = [make_booking(id_booking=5),
-                                                  make_booking(id_booking=6)]
+    mock_service.find_by_customer.return_value = [make_booking(id_booking=5), make_booking(id_booking=6)]
 
     response = client.get(f"{BASE_URL}/me", headers=CUSTOMER)
 

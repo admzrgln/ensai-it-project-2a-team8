@@ -163,8 +163,7 @@ def test_create_refused_organizer_is_not_admin(service):
 def test_create_refused_overlapping_screening(service):
     service.screening_dao.find_overlapping.return_value = [make_screening(id_screening=42)]
 
-    with pytest.raises(ScreeningError,
-                       match=r"Room 1 is already used at this time \(screening 42\)"):
+    with pytest.raises(ScreeningError, match=r"Room 1 is already used at this time \(screening 42\)"):
         service.create_screening(make_screening())
     service.screening_dao.insert_screening.assert_not_called()
 

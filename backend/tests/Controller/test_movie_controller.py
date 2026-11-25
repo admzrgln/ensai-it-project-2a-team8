@@ -1,4 +1,3 @@
-
 from unittest.mock import patch
 
 from fastapi import FastAPI
@@ -24,7 +23,7 @@ movie_data = {
     "duration": 148,
     "genre": "Sci-Fi",
     "external_id": "tt1375666",
-    "poster_url": "https://example.com/inception.jpg"
+    "poster_url": "https://example.com/inception.jpg",
 }
 
 

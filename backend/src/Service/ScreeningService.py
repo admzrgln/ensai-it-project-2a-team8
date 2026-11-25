@@ -77,8 +77,7 @@ class ScreeningService:
 
     @staticmethod
     def _normalize_date(screening: Screening) -> None:
-        """Convert a date with a time zone ("...Z" or "+01:00") into the server time,
-        without time zone.
+        """Convert a date with a time zone ("...Z" or "+01:00") into the server time, without time zone.
 
         Like datetime.now() and the TIMESTAMP column of the database; otherwise the
         comparison with datetime.now() fails.

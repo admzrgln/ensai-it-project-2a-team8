@@ -73,8 +73,7 @@ def test_plan_revision_business_error_gives_400(mock_service):
 
 @patch(SERVICE)
 def test_plan_revision_already_applied_gives_400(mock_service):
-    mock_service.plan_revision.side_effect = PriceRevisionError(
-        "The 2027 revision has already been applied")
+    mock_service.plan_revision.side_effect = PriceRevisionError("The 2027 revision has already been applied")
 
     response = client.put(f"{BASE_URL}/2027", json={"rate_percent": 2.0}, headers=ADMIN)
 
@@ -119,8 +118,7 @@ def test_cancel_revision(mock_service):
 
 @patch(SERVICE)
 def test_cancel_revision_not_found_gives_404(mock_service):
-    mock_service.cancel_revision.side_effect = PriceRevisionError(
-        "Revision 2027 not found or already applied")
+    mock_service.cancel_revision.side_effect = PriceRevisionError("Revision 2027 not found or already applied")
 
     response = client.delete(f"{BASE_URL}/2027", headers=ADMIN)
 

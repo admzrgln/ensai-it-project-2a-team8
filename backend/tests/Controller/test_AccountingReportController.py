@@ -28,8 +28,7 @@ CUSTOMER = {"Authorization": f"Bearer {jwt.encode_jwt(10, 'customer').access_tok
 @pytest.fixture
 def service():
     """Mock of the service used by the route."""
-    with patch(
-            "backend.src.Controller.AccountingReportController.accounting_service") as mock_service:
+    with patch("backend.src.Controller.AccountingReportController.accounting_service") as mock_service:
         yield mock_service
 
 
@@ -43,11 +42,7 @@ def october_report() -> AccountingReport:
         ],
         id_admin=1,
         movie_occupancies=[
-            MovieOccupancy(id_movie=1,
-                           title="Dune: Part Two",
-                           screenings=2,
-                           seats_offered=200,
-                           seats_sold=50),
+            MovieOccupancy(id_movie=1, title="Dune: Part Two", screenings=2, seats_offered=200, seats_sold=50),
         ],
     )
 
@@ -136,10 +131,8 @@ def test_empty_period_returns_an_empty_report(service):
 @pytest.mark.parametrize(
     "exception, status",
     [
-        pytest.param(ValueError(
-            "period_start must be before or equal to period_end"), 400, id="bad-period"),
-        pytest.param(PermissionError(
-            "Only an administrator can generate an accounting report"), 403, id="not-admin"),
+        pytest.param(ValueError("period_start must be before or equal to period_end"), 400, id="bad-period"),
+        pytest.param(PermissionError("Only an administrator can generate an accounting report"), 403, id="not-admin"),
         pytest.param(LookupError("User 999 not found"), 404, id="unknown-user"),
     ],
 )

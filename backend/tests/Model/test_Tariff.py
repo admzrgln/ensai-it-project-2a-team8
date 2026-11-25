@@ -40,8 +40,7 @@ def test_tariff_without_condition_is_for_everyone():
     assert t.is_eligible(age=0, is_ensai_student=True, is_student=True)
 
 
-@pytest.mark.parametrize("age, expected", [(12, False),
-                         (13, True), (64, True), (65, True), (66, False)])
+@pytest.mark.parametrize("age, expected", [(12, False), (13, True), (64, True), (65, True), (66, False)])
 def test_age_bounds_are_inclusive(age, expected):
     t = Tariff("x", "13-65 ans", 5.0, min_age=13, max_age=65)
     assert t.is_eligible(age, False, False) is expected
@@ -73,8 +72,7 @@ def test_requires_student_accepts_ensai_students():
 
 
 def test_all_conditions_must_be_met():
-    t = Tariff("young_student", "Étudiant·e de moins de 26 ans",
-               5.0, max_age=25, requires_student=True)
+    t = Tariff("young_student", "Étudiant·e de moins de 26 ans", 5.0, max_age=25, requires_student=True)
     assert t.is_eligible(22, False, True)
     assert not t.is_eligible(30, False, True)
     assert not t.is_eligible(22, False, False)
@@ -86,8 +84,7 @@ THURSDAY_2PM = datetime(2026, 12, 17, 14, 0)
 
 
 def wednesday_afternoon() -> Tariff:
-    return Tariff("wed", "Mercredi après-midi", 6.5,
-                  weekday=2, time_from=time(12, 0), time_until=time(18, 0))
+    return Tariff("wed", "Mercredi après-midi", 6.5, weekday=2, time_from=time(12, 0), time_until=time(18, 0))
 
 
 def test_schedule_tariff_has_schedule_condition():

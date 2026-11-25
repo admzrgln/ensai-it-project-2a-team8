@@ -21,8 +21,16 @@ def dao():
 
 
 def tariff_row(**overrides) -> dict:
-    row = {"code": "child", "label": "Moins de 14 ans", "price": Decimal("4.50"), "min_age": None,
-           "max_age": 13, "requires_ensai": False, "requires_student": False, "is_active": True}
+    row = {
+        "code": "child",
+        "label": "Moins de 14 ans",
+        "price": Decimal("4.50"),
+        "min_age": None,
+        "max_age": 13,
+        "requires_ensai": False,
+        "requires_student": False,
+        "is_active": True,
+    }
     row.update(overrides)
     return row
 
@@ -41,23 +49,32 @@ def test_to_tariff_without_schedule_columns():
 
 
 def test_to_tariff_maps_schedule_columns():
-    t = TariffDao._to_tariff(tariff_row(code="wed", weekday=2,
-                             time_from=time(12, 0), time_until=time(18, 0)))
+    t = TariffDao._to_tariff(tariff_row(code="wed", weekday=2, time_from=time(12, 0), time_until=time(18, 0)))
     assert (t.weekday, t.time_from, t.time_until) == (2, time(12, 0), time(18, 0))
 
 
 def test_to_data_contains_all_columns():
     t = Tariff("senior", "65 ans et +", 5.0, min_age=65)
     assert TariffDao._to_data(t) == {
-        "code": "senior", "label": "65 ans et +", "price": 5.0, "min_age": 65, "max_age": None,
-        "requires_ensai": False, "requires_student": False, "is_active": True,
-        "weekday": None, "time_from": None, "time_until": None,
+        "code": "senior",
+        "label": "65 ans et +",
+        "price": 5.0,
+        "min_age": 65,
+        "max_age": None,
+        "requires_ensai": False,
+        "requires_student": False,
+        "is_active": True,
+        "weekday": None,
+        "time_from": None,
+        "time_until": None,
     }
 
 
 def test_find_all_active_only_by_default(dao, sql_query):
-    sql_query.return_value = [tariff_row(), tariff_row(code="full",
-                              label="Plein tarif", price=Decimal("9.00"), max_age=None)]
+    sql_query.return_value = [
+        tariff_row(),
+        tariff_row(code="full", label="Plein tarif", price=Decimal("9.00"), max_age=None),
+    ]
 
     tariffs = dao.find_all()
 

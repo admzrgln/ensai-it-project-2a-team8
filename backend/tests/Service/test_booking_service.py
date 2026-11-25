@@ -14,15 +14,28 @@ FULL_PRICE = 9.0
 
 
 def make_screening(**overrides) -> Screening:
-    data = dict(id_screening=1, id_room=1, id_movie=1, id_admin=1,
-                date_time=datetime.now() + timedelta(days=7), available_seats=50)
+    data = dict(
+        id_screening=1,
+        id_room=1,
+        id_movie=1,
+        id_admin=1,
+        date_time=datetime.now() + timedelta(days=7),
+        available_seats=50,
+    )
     data.update(overrides)
     return Screening(**data)
 
 
 def make_customer(**overrides) -> Customer:
-    data = dict(id_user=10, first_name="Louise", last_name="F", email="l@mail.fr",
-                password="x", date_of_birth=date(2004, 3, 1), is_ensai_student=False)
+    data = dict(
+        id_user=10,
+        first_name="Louise",
+        last_name="F",
+        email="l@mail.fr",
+        password="x",
+        date_of_birth=date(2004, 3, 1),
+        is_ensai_student=False,
+    )
     data.update(overrides)
     return Customer(**data)
 
@@ -54,8 +67,9 @@ def service():
 
 
 def test_book_myself_and_guests(service):
-    booking = service.book(10, 1, include_myself=True, customer_is_student=True,
-                           guests=[guest(), guest(date_of_birth=date(2018, 1, 1))])
+    booking = service.book(
+        10, 1, include_myself=True, customer_is_student=True, guests=[guest(), guest(date_of_birth=date(2018, 1, 1))]
+    )
 
     assert booking.seat_count == 3
     assert [t.tariff_code for t in booking.tickets] == ["student", "full", "child"]
@@ -94,8 +108,7 @@ def test_empty_booking_refused(service):
 
 
 def test_past_screening_refused(service):
-    service.screening_dao.find_by_id.return_value = make_screening(
-        date_time=datetime.now() - timedelta(hours=1))
+    service.screening_dao.find_by_id.return_value = make_screening(date_time=datetime.now() - timedelta(hours=1))
     with pytest.raises(BookingError):
         service.book(10, 1, True, False, [])
 
@@ -119,16 +132,14 @@ def test_guest_born_after_screening_refused(service):
 
 
 def test_cancel_other_customer_booking_refused(service):
-    service.booking_dao.find_by_id.return_value = Booking(
-        id_customer=99, id_screening=1, id_booking=5)
+    service.booking_dao.find_by_id.return_value = Booking(id_customer=99, id_screening=1, id_booking=5)
     with pytest.raises(BookingError):
         service.cancel(5, id_customer=10)
     service.booking_dao.cancel_booking.assert_not_called()
 
 
 def test_cancel_ok(service):
-    service.booking_dao.find_by_id.return_value = Booking(
-        id_customer=10, id_screening=1, id_booking=5)
+    service.booking_dao.find_by_id.return_value = Booking(id_customer=10, id_screening=1, id_booking=5)
     service.booking_dao.cancel_booking.return_value = True
     assert service.cancel(5, id_customer=10) is True
 
@@ -179,25 +190,25 @@ def test_find_by_customer_delegates_to_dao(service):
 
 def test_cancel_already_cancelled_booking_refused(service):
     service.booking_dao.find_by_id.return_value = Booking(
-        id_customer=10, id_screening=1, id_booking=5, status="cancelled")
+        id_customer=10, id_screening=1, id_booking=5, status="cancelled"
+    )
     with pytest.raises(BookingError, match="already cancelled"):
         service.cancel(5, id_customer=10)
     service.booking_dao.cancel_booking.assert_not_called()
 
 
 def test_cancel_started_screening_refused(service):
-    service.booking_dao.find_by_id.return_value = Booking(
-        id_customer=10, id_screening=1, id_booking=5)
-    service.screening_dao.find_by_id.return_value = make_screening(
-        date_time=datetime.now() - timedelta(hours=1))
+    service.booking_dao.find_by_id.return_value = Booking(id_customer=10, id_screening=1, id_booking=5)
+    service.screening_dao.find_by_id.return_value = make_screening(date_time=datetime.now() - timedelta(hours=1))
     with pytest.raises(BookingError, match="already started"):
         service.cancel(5, id_customer=10)
     service.booking_dao.cancel_booking.assert_not_called()
 
 
 def test_prices_come_from_the_grid(service):
-    booking = service.quote(10, 1, include_myself=False, customer_is_student=False,
-                            guests=[guest(), guest(date_of_birth=date(2018, 1, 1))])
+    booking = service.quote(
+        10, 1, include_myself=False, customer_is_student=False, guests=[guest(), guest(date_of_birth=date(2018, 1, 1))]
+    )
     assert [t.price for t in booking.tickets] == [FULL_PRICE, 4.50]
     assert booking.total_price == FULL_PRICE + 4.50
 

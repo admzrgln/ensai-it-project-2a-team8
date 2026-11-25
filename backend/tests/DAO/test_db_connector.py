@@ -4,8 +4,14 @@ import pytest
 
 from backend.src.DAO.DBConnector import DBConnector
 
-CONFIG = {"host": "db.example", "port": "5432", "database": "cinema", "user": "louise",
-          "password": "secret", "schema": "public"}
+CONFIG = {
+    "host": "db.example",
+    "port": "5432",
+    "database": "cinema",
+    "user": "louise",
+    "password": "secret",
+    "schema": "public",
+}
 
 
 @pytest.fixture
@@ -26,17 +32,27 @@ def cursor(connect):
 def test_config_from_dict():
     db = DBConnector(CONFIG)
     assert (db.host, db.port, db.database, db.user, db.password, db.schema) == (
-        "db.example", "5432", "cinema", "louise", "secret", "public")
+        "db.example",
+        "5432",
+        "cinema",
+        "louise",
+        "secret",
+        "public",
+    )
 
 
 def test_config_from_environment(monkeypatch):
-    for key, value in {"POSTGRES_HOST": "h", "POSTGRES_PORT": "1", "POSTGRES_DATABASE": "d",
-                       "POSTGRES_USER": "u", "POSTGRES_PASSWORD": "p",
-                       "POSTGRES_SCHEMA": "s"}.items():
+    for key, value in {
+        "POSTGRES_HOST": "h",
+        "POSTGRES_PORT": "1",
+        "POSTGRES_DATABASE": "d",
+        "POSTGRES_USER": "u",
+        "POSTGRES_PASSWORD": "p",
+        "POSTGRES_SCHEMA": "s",
+    }.items():
         monkeypatch.setenv(key, value)
     db = DBConnector()
-    assert (db.host, db.port, db.database,
-            db.user, db.password, db.schema) == ("h", "1", "d", "u", "p", "s")
+    assert (db.host, db.port, db.database, db.user, db.password, db.schema) == ("h", "1", "d", "u", "p", "s")
 
 
 def test_missing_environment_variable_raises(monkeypatch):

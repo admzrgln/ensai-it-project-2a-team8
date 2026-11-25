@@ -23,21 +23,35 @@ def dao():
 
 
 def user_row(**overrides) -> dict:
-    row = {"id_user": 2, "first_name": "Louise", "last_name": "F", "email": "l@ensai.fr",
-           "password": "hash", "salt": "abc", "date_of_birth": BIRTH, "role": "customer",
-           "is_ensai_student": True}
+    row = {
+        "id_user": 2,
+        "first_name": "Louise",
+        "last_name": "F",
+        "email": "l@ensai.fr",
+        "password": "hash",
+        "salt": "abc",
+        "date_of_birth": BIRTH,
+        "role": "customer",
+        "is_ensai_student": True,
+    }
     row.update(overrides)
     return row
 
 
 def admin_row(**overrides) -> dict:
-    return user_row(id_user=1, first_name="Ad", last_name="Min", email="admin@mail.fr",
-                    role="admin", is_ensai_student=False, **overrides)
+    return user_row(
+        id_user=1,
+        first_name="Ad",
+        last_name="Min",
+        email="admin@mail.fr",
+        role="admin",
+        is_ensai_student=False,
+        **overrides,
+    )
 
 
 def make_customer() -> Customer:
-    return Customer(None, "Louise", "F", "l@ensai.fr",
-                    "hash", BIRTH, is_ensai_student=True, salt="abc")
+    return Customer(None, "Louise", "F", "l@ensai.fr", "hash", BIRTH, is_ensai_student=True, salt="abc")
 
 
 def make_admin() -> Administrator:
@@ -47,8 +61,7 @@ def make_admin() -> Administrator:
 def test_to_user_customer():
     u = UserDao._to_user(user_row())
     assert isinstance(u, Customer)
-    assert (u.id_user, u.first_name, u.email, u.password, u.salt) == (2, "Louise",
-                                                                      "l@ensai.fr", "hash", "abc")
+    assert (u.id_user, u.first_name, u.email, u.password, u.salt) == (2, "Louise", "l@ensai.fr", "hash", "abc")
     assert u.date_of_birth == BIRTH
     assert u.is_ensai_student is True
 
@@ -105,11 +118,14 @@ def test_find_user_by_email_not_found(dao, sql_query):
     assert dao.find_user_by_email("nobody@mail.fr") is None
 
 
-@pytest.mark.parametrize("call", [
-    lambda d: d.find_all_user(),
-    lambda d: d.find_by_id(2),
-    lambda d: d.find_user_by_email("l@ensai.fr"),
-])
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda d: d.find_all_user(),
+        lambda d: d.find_by_id(2),
+        lambda d: d.find_user_by_email("l@ensai.fr"),
+    ],
+)
 def test_get_methods_propagate_db_error(dao, sql_query, call):
     sql_query.side_effect = Exception("db down")
     with pytest.raises(Exception, match="db down"):
