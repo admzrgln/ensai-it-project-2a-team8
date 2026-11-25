@@ -125,5 +125,7 @@ def test_update_room_refused_for_customer(mock_service):
 
 @patch("backend.src.Controller.RoomController.room_service")
 def test_update_room_refused_without_token(mock_service):
-    assert client.put(f"{BASE_URL}/1", json={"number": "B2", "capacity": 90}).status_code in (401, 403)
+    response = client.put(f"{BASE_URL}/1", json={"number": "B2", "capacity": 90})
+
+    assert response.status_code in (401, 403)
     mock_service.update_room.assert_not_called()

@@ -1,5 +1,3 @@
-# Architecture 
-
 # Architecture
 
 ```mermaid

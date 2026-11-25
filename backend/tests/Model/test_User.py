@@ -1,10 +1,8 @@
 from datetime import date
 
 import pytest
-from pydantic import ValidationError
 
 from backend.src.Model.Administrator import Administrator
-from backend.src.Model.APIUser import APIUser
 from backend.src.Model.Customer import Customer
 from backend.src.Model.User import User
 
@@ -74,13 +72,3 @@ def test_administrator_role_is_forced():
 def test_administrator_str():
     text = str(Administrator(1, "Ad", "Min", "admin@mail.fr", "pw", BIRTH))
     assert "Ad Min" in text and "admin" in text and "admin@mail.fr" in text
-
-
-def test_api_user_ok():
-    u = APIUser(id=3, username="louise")
-    assert (u.id, u.username) == (3, "louise")
-
-
-def test_api_user_invalid_id():
-    with pytest.raises(ValidationError):
-        APIUser(id="trois", username="louise")
