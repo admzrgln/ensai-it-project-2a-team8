@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from backend.src.Controller.RoomController import room_router
 from backend.src.Model.Room import Room
+from backend.src.Service.JWTService import JwtService
 
 app = FastAPI()
 app.include_router(room_router)
@@ -13,6 +14,10 @@ app.include_router(room_router)
 client = TestClient(app)
 
 BASE_URL = "/rooms"
+
+jwt = JwtService()
+ADMIN = {"Authorization": f"Bearer {jwt.encode_jwt(1, 'admin').access_token}"}
+CUSTOMER = {"Authorization": f"Bearer {jwt.encode_jwt(10, 'customer').access_token}"}
 
 room = Room(number="A1", capacity=150, id_room=1)
 
@@ -73,11 +78,52 @@ def test_room_by_id_invalid_id(mock_service):
     ("method", "url"),
     [
         pytest.param("post", f"{BASE_URL}/", id="create"),
-        pytest.param("put", f"{BASE_URL}/1", id="update"),
         pytest.param("delete", f"{BASE_URL}/1", id="delete"),
     ],
 )
-def test_rooms_cannot_be_modified(method, url):
+def test_rooms_cannot_be_created_or_deleted(method, url):
     response = client.request(method.upper(), url, json={"number": "Z9", "capacity": 10})
 
     assert response.status_code == 405
+
+
+@patch("backend.src.Controller.RoomController.room_service")
+def test_update_room(mock_service):
+    mock_service.update_room.return_value = True
+
+    response = client.put(f"{BASE_URL}/1", json={"number": "B2", "capacity": 90}, headers=ADMIN)
+
+    assert response.status_code == 200
+    assert response.json() == {"id_room": 1, "number": "B2", "capacity": 90}
+    updated = mock_service.update_room.call_args.args[0]
+    assert (updated.id_room, updated.number, updated.capacity) == (1, "B2", 90)
+
+
+@patch("backend.src.Controller.RoomController.room_service")
+def test_update_room_not_found(mock_service):
+    mock_service.update_room.return_value = False
+
+    response = client.put(f"{BASE_URL}/999", json={"number": "B2", "capacity": 90}, headers=ADMIN)
+
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize("body", [{"number": "B2", "capacity": 0}, {"number": " ", "capacity": 90}])
+@patch("backend.src.Controller.RoomController.room_service")
+def test_update_room_invalid_values(mock_service, body):
+    assert client.put(f"{BASE_URL}/1", json=body, headers=ADMIN).status_code == 422
+    mock_service.update_room.assert_not_called()
+
+
+@patch("backend.src.Controller.RoomController.room_service")
+def test_update_room_refused_for_customer(mock_service):
+    response = client.put(f"{BASE_URL}/1", json={"number": "B2", "capacity": 90}, headers=CUSTOMER)
+
+    assert response.status_code == 403
+    mock_service.update_room.assert_not_called()
+
+
+@patch("backend.src.Controller.RoomController.room_service")
+def test_update_room_refused_without_token(mock_service):
+    assert client.put(f"{BASE_URL}/1", json={"number": "B2", "capacity": 90}).status_code in (401, 403)
+    mock_service.update_room.assert_not_called()
