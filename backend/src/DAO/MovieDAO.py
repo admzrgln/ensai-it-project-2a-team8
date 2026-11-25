@@ -9,14 +9,17 @@ logger = get_logger(__name__)
 
 
 class MovieDao(metaclass=Singleton):
-    """Class containing methods to access Movies in the database."""
+    """Access to the movies in the database."""
 
-    # partie GET
+    # GET
     @log
     def find_all(self) -> list[Movie]:
-        """List all movies in the database.
-        Returns:
-            list[Movie]
+        """List all the movies, ordered by title.
+
+        Returns
+        -------
+        list of Movie
+            All the movies (empty list if there is none).
         """
         try:
             query = "SELECT * FROM public.movie ORDER BY title;"
@@ -44,12 +47,21 @@ class MovieDao(metaclass=Singleton):
 
     @log
     def find_by_id(self, movie_id: int) -> Movie | None:
-        """Find a movie by its id."""
+        """Find a movie by its identifier.
+
+        Parameters
+        ----------
+        movie_id : int
+            Identifier of the movie.
+
+        Returns
+        -------
+        Movie or None
+            The movie, or None if it does not exist.
+        """
         try:
             query = "SELECT * FROM public.movie WHERE id_movie = %(id_movie)s;"
-            res = DBConnector().sql_query(
-                query, data={"id_movie": movie_id}, return_type="one"
-            )
+            res = DBConnector().sql_query(query, data={"id_movie": movie_id}, return_type="one")
         except Exception as e:
             logger.error(e)
             raise
@@ -69,16 +81,25 @@ class MovieDao(metaclass=Singleton):
 
     @log
     def find_by_title(self, title: str) -> Movie | None:
-        """Find a movie by its id."""
+        """Find a movie by its title (case-insensitive, ILIKE patterns accepted).
+
+        Parameters
+        ----------
+        title : str
+            Title, or ILIKE pattern, of the movie.
+
+        Returns
+        -------
+        Movie or None
+            The first movie found, or None.
+        """
         try:
             query = """
             SELECT *
             FROM public.movie
             WHERE title ILIKE %(title)s;
             """
-            res = DBConnector().sql_query(
-                query, data={"title": title}, return_type="one"
-            )
+            res = DBConnector().sql_query(query, data={"title": title}, return_type="one")
 
         except Exception as e:
             logger.error(e)
@@ -97,20 +118,20 @@ class MovieDao(metaclass=Singleton):
 
         return movie
 
-    # partie POST
+    # POST
     @log
     def insert_movie(self, movie: Movie) -> bool:
-        """Create a movie in the database
+        """Insert a new movie; its id_movie is filled on success.
 
         Parameters
         ----------
         movie : Movie
+            The movie to insert.
 
         Returns
         -------
-        created : bool
-            True if creation is successful
-            False otherwise
+        bool
+            True if the movie was inserted, False otherwise.
         """
 
         query = """
@@ -135,28 +156,28 @@ class MovieDao(metaclass=Singleton):
                 return True
 
         except Exception as e:  # noqa: BLE001
-            logging.error(f"Erreur lors de l'insertion du film : {e}")  # noqa: LOG015
+            logging.error(f"Error while inserting the movie: {e}")
 
         return False
 
-    # partie UPDATE
+    # UPDATE
     @log
     def update_movie(self, movie: Movie) -> bool:
-        """Update a movie in the database
+        """Update a movie, found by its id_movie.
 
         Parameters
         ----------
         movie : Movie
+            The movie with its new values.
 
         Returns
         -------
-        created : bool
-            True if modification is successful
-            False otherwise
+        bool
+            True if the movie was updated, False otherwise.
         """
 
         if movie.id_movie is None:
-            logging.error("Impossible de mettre à jour : id_movie est None.")  # noqa: LOG015
+            logging.error("Cannot update: id_movie is None.")
             return False
 
         query = """
@@ -172,7 +193,7 @@ class MovieDao(metaclass=Singleton):
             "genre": movie.genre,
             "external_id": movie.external_id,
             "poster_url": movie.poster_url,
-            "id_movie": movie.id_movie
+            "id_movie": movie.id_movie,
         }
 
         try:
@@ -183,23 +204,23 @@ class MovieDao(metaclass=Singleton):
                 return True
 
         except Exception as e:  # noqa: BLE001
-            logging.error(f"Erreur lors de l'insertion du film : {e}")  # noqa: LOG015
+            logging.error(f"Error while inserting the movie: {e}")
 
         return False
 
-    # partie DELETE
+    # DELETE
     def movie_delete(self, id_movie: int) -> bool:
-        """Update a movie in the database
+        """Delete a movie by its identifier.
 
         Parameters
         ----------
         id_movie : int
+            Identifier of the movie.
 
         Returns
         -------
-        created : bool
-            True delete is successful
-            False otherwise
+        bool
+            True if the movie was deleted, False otherwise.
         """
 
         try:
@@ -207,9 +228,7 @@ class MovieDao(metaclass=Singleton):
             DELETE FROM movie WHERE id_movie = %(id_movie)s
             RETURNING id_movie;
             """
-            res = DBConnector().sql_query(
-                query, data={"id_movie": id_movie}, return_type="one"
-            )
+            res = DBConnector().sql_query(query, data={"id_movie": id_movie}, return_type="one")
 
             if res:
                 return True
@@ -221,12 +240,21 @@ class MovieDao(metaclass=Singleton):
 
     @log
     def find_by_external_id(self, external_id: str) -> Movie | None:
-        """Find a movie by its external (IMDb) id."""
+        """Find a movie by its IMDb identifier.
+
+        Parameters
+        ----------
+        external_id : str
+            IMDb identifier, e.g. "tt1375666".
+
+        Returns
+        -------
+        Movie or None
+            The movie, or None if it is not in the database.
+        """
         try:
             query = "SELECT * FROM public.movie WHERE external_id = %(external_id)s;"
-            res = DBConnector().sql_query(
-                query, data={"external_id": external_id}, return_type="one"
-            )
+            res = DBConnector().sql_query(query, data={"external_id": external_id}, return_type="one")
         except Exception as e:
             logger.error(e)
             raise

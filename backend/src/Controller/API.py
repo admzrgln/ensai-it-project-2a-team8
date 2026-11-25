@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -17,17 +18,30 @@ from .UserController import user_router
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Exécuté au démarrage de l'API : applique les révisions de prix dont l'année a commencé
-    (rattrape un 1er janvier passé pendant que le serveur était éteint)."""
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Run at the start of the API: apply the price revisions whose year has started.
+
+    This catches up a January 1st that passed while the server was off.
+
+    Parameters
+    ----------
+    app : FastAPI
+        The application starting.
+
+    Returns
+    -------
+    AsyncIterator[None]
+        Context manager of the life of the application.
+    """
     PriceRevisionService().apply_due_revisions()
     yield
 
 
-def run_app():
+def run_app() -> None:
+    """Create the FastAPI application with all its routes and start the server on port 8001."""
     app = FastAPI(
         title="Projet Info 2A",
-        description="Example project for ENSAI students",
+        description="Ensai Cinema Club: screenings, bookings and accounting of the cinema",
         root_path="/proxy/8001",
         lifespan=lifespan,
     )
@@ -42,8 +56,14 @@ def run_app():
     app.include_router(price_revision_router)
 
     @app.get("/", include_in_schema=False)
-    async def redirect_to_docs():
-        """Redirect to the API documentation"""
+    async def redirect_to_docs() -> RedirectResponse:
+        """Redirect to the API documentation.
+
+        Returns
+        -------
+        RedirectResponse
+            Redirection to /docs.
+        """
         return RedirectResponse(url="/docs")
 
     uvicorn.run(app, port=8001, host="0.0.0.0")

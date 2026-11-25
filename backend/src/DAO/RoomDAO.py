@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 from backend.src.DAO.DBConnector import DBConnector
 from backend.src.Model.Room import Room
 from utils.log_utils import get_logger, log
@@ -7,11 +11,22 @@ logger = get_logger(__name__)
 
 
 class RoomDao(metaclass=Singleton):
-    """Class containing methods to access Rooms in the database."""
+    """Access to the rooms in the database."""
 
     @staticmethod
-    def _to_room(row: dict) -> Room:
-        """Convertit une ligne SQL en objet Room."""
+    def _to_room(row: dict[str, Any]) -> Room:
+        """Convert a row of the room table into a Room.
+
+        Parameters
+        ----------
+        row : dict
+            Row returned by the database.
+
+        Returns
+        -------
+        Room
+            The corresponding room.
+        """
         return Room(
             id_room=row["id_room"],
             number=row["number"],
@@ -21,6 +36,13 @@ class RoomDao(metaclass=Singleton):
     # GET
     @log
     def find_all(self) -> list[Room]:
+        """List all the rooms, ordered by number.
+
+        Returns
+        -------
+        list of Room
+            All the rooms (empty list if there is none).
+        """
         query = "SELECT * FROM public.room ORDER BY number;"
         try:
             res = DBConnector().sql_query(query, return_type="all")
@@ -31,6 +53,18 @@ class RoomDao(metaclass=Singleton):
 
     @log
     def find_by_id(self, id_room: int) -> Room | None:
+        """Find a room by its identifier.
+
+        Parameters
+        ----------
+        id_room : int
+            Identifier of the room.
+
+        Returns
+        -------
+        Room or None
+            The room, or None if it does not exist.
+        """
         query = "SELECT * FROM public.room WHERE id_room = %(id_room)s;"
         try:
             res = DBConnector().sql_query(query, data={"id_room": id_room}, return_type="one")
@@ -42,7 +76,18 @@ class RoomDao(metaclass=Singleton):
     # POST
     @log
     def insert_room(self, room: Room) -> bool:
-        """ Insert a new room in the database. """
+        """Insert a new room; its id_room is filled on success.
+
+        Parameters
+        ----------
+        room : Room
+            The room to insert.
+
+        Returns
+        -------
+        bool
+            True if the room was inserted, False otherwise.
+        """
         query = """
             INSERT INTO public.room (number, capacity)
             VALUES (%(number)s, %(capacity)s)
@@ -55,15 +100,26 @@ class RoomDao(metaclass=Singleton):
                 room.id_room = res["id_room"]
                 return True
         except Exception as e:
-            logger.error(f"Erreur lors de l'insertion de la salle : {e}")
+            logger.error(f"Error while inserting the room: {e}")
         return False
 
     # UPDATE
     @log
     def update_room(self, room: Room) -> bool:
-        """ Update a room by its id_room. """
+        """Update a room, found by its id_room.
+
+        Parameters
+        ----------
+        room : Room
+            The room with its new values.
+
+        Returns
+        -------
+        bool
+            True if the room was updated, False otherwise (unknown room, no id or database error).
+        """
         if room.id_room is None:
-            logger.error("Impossible de mettre à jour : id_room est None.")
+            logger.error("Cannot update: id_room is None.")
             return False
         query = """
             UPDATE public.room
@@ -80,13 +136,24 @@ class RoomDao(metaclass=Singleton):
             res = DBConnector().sql_query(query, data=data, return_type="one")
             return bool(res)
         except Exception as e:
-            logger.error(f"Erreur lors de la mise à jour de la salle : {e}")
+            logger.error(f"Error while updating the room: {e}")
         return False
 
     # DELETE
     @log
     def delete_room(self, id_room: int) -> bool:
-        """ Delete a room by its id_room """
+        """Delete a room by its identifier.
+
+        Parameters
+        ----------
+        id_room : int
+            Identifier of the room.
+
+        Returns
+        -------
+        bool
+            True if the room was deleted, False otherwise.
+        """
         query = """
             DELETE FROM public.room
             WHERE id_room = %(id_room)s
@@ -96,5 +163,5 @@ class RoomDao(metaclass=Singleton):
             res = DBConnector().sql_query(query, data={"id_room": id_room}, return_type="one")
             return bool(res)
         except Exception as e:
-            logger.error(f"Erreur lors de la suppression de la salle : {e}")
+            logger.error(f"Error while deleting the room: {e}")
         return False

@@ -1,15 +1,34 @@
-from datetime import date
+from __future__ import annotations
 
-from backend.src.Model.MovieOccupancy import MovieOccupancy
-from backend.src.Model.MovieRevenue import MovieRevenue
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from datetime import date
+
+    from backend.src.Model.MovieOccupancy import MovieOccupancy
+    from backend.src.Model.MovieRevenue import MovieRevenue
 
 
 class AccountingReport:
-    """Class representing the accounting report of a period.
+    """Accounting report of a period; the totals are computed from the lines given.
 
-    Totals are derived from the lines in the constructor.
     Revenue lines are counted on the sale date; occupancy lines on the screening date
     (only screenings already started).
+
+    Parameters
+    ----------
+    period_start : date
+        First day of the period (inclusive).
+    period_end : date
+        Last day of the period (inclusive).
+    movie_revenues : list of MovieRevenue
+        Revenue and tickets sold per movie.
+    id_admin : int or None, optional
+        Identifier of the administrator who asked for the report.
+    id_report : int or None, optional
+        Identifier of the report.
+    movie_occupancies : list of MovieOccupancy or None, optional
+        Occupancy per movie (empty list by default).
     """
 
     def __init__(
@@ -20,28 +39,31 @@ class AccountingReport:
         id_admin: int | None = None,
         id_report: int | None = None,
         movie_occupancies: list[MovieOccupancy] | None = None,
-    ):
+    ) -> None:
         self.id_report = id_report
         self.id_admin = id_admin
         self.period_start = period_start
         self.period_end = period_end
         self.movie_revenues = movie_revenues
         self.movie_occupancies = movie_occupancies or []
-        self.total_amount = sum(m.revenue for m in movie_revenues)
-        self.tickets_sold = sum(m.tickets_sold for m in movie_revenues)
+
+        # Computed values
+        self.total_amount: float = sum(m.revenue for m in movie_revenues)
+        self.tickets_sold: int = sum(m.tickets_sold for m in movie_revenues)
         if self.tickets_sold:
             self.average_ticket_price = self.total_amount / self.tickets_sold
         else:
             self.average_ticket_price = 0.0
 
-        self.seats_offered = sum(o.seats_offered for o in self.movie_occupancies)
-        self.seats_sold = sum(o.seats_sold for o in self.movie_occupancies)
+        # Global occupancy: weighted by seats (not the mean of the per-movie rates)
+        self.seats_offered: int = sum(o.seats_offered for o in self.movie_occupancies)
+        self.seats_sold: int = sum(o.seats_sold for o in self.movie_occupancies)
         if self.seats_offered:
             self.occupancy_rate = round(100 * self.seats_sold / self.seats_offered, 1)
         else:
             self.occupancy_rate = 0.0
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"""
             Accounting report from {self.period_start} to {self.period_end},
             Total amount : {self.total_amount:.2f} euros

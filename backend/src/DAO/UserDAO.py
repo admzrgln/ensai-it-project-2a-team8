@@ -1,19 +1,36 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 from backend.src.DAO.DBConnector import DBConnector
 from backend.src.Model.Administrator import Administrator
 from backend.src.Model.Customer import Customer
-from backend.src.Model.User import User
 from utils.log_utils import get_logger, log
 from utils.singleton import Singleton
+
+if TYPE_CHECKING:
+    from backend.src.Model.User import User
 
 logger = get_logger(__name__)
 
 
 class UserDao(metaclass=Singleton):
-    """Class containing methods to access User in the database."""
+    """Access to the users (administrators and customers) in the database."""
 
     @staticmethod
-    def _to_user(row: dict) -> User:
-        """Convertit une ligne SQL en Administrator ou Customer."""
+    def _to_user(row: dict[str, Any]) -> User:
+        """Convert a row of the app_user table into an Administrator or a Customer.
+
+        Parameters
+        ----------
+        row : dict
+            Row returned by the database.
+
+        Returns
+        -------
+        User
+            An Administrator if the role is "admin", a Customer otherwise.
+        """
         if row["role"] == "admin":
             return Administrator(
                 id_user=row["id_user"],
@@ -35,10 +52,16 @@ class UserDao(metaclass=Singleton):
             salt=row.get("salt"),
         )
 
-    # partie GET
+    # GET
     @log
     def find_all_user(self) -> list[User]:
-        """List all users in the database."""
+        """List all the users, ordered by last name.
+
+        Returns
+        -------
+        list of User
+            All the users (empty list if there is none).
+        """
         try:
             query = "SELECT * FROM public.app_user ORDER BY last_name;"
             res = DBConnector().sql_query(query, return_type="all")
@@ -50,7 +73,18 @@ class UserDao(metaclass=Singleton):
 
     @log
     def find_by_id(self, id_user: int) -> User | None:
-        """Find a user by its id."""
+        """Find a user by their identifier.
+
+        Parameters
+        ----------
+        id_user : int
+            Identifier of the user.
+
+        Returns
+        -------
+        User or None
+            The user, or None if they do not exist.
+        """
         try:
             query = "SELECT * FROM public.app_user WHERE id_user = %(id_user)s;"
             row = DBConnector().sql_query(query, data={"id_user": id_user}, return_type="one")
@@ -62,7 +96,18 @@ class UserDao(metaclass=Singleton):
 
     @log
     def find_user_by_email(self, email: str) -> User | None:
-        """Find a user by their email address (crucial for authentication)."""
+        """Find a user by their email address (used to log in).
+
+        Parameters
+        ----------
+        email : str
+            Email address of the user.
+
+        Returns
+        -------
+        User or None
+            The user, or None if no account uses this address.
+        """
         try:
             query = "SELECT * FROM public.app_user WHERE email = %(email)s;"
             res = DBConnector().sql_query(query, data={"email": email}, return_type="one")
@@ -72,10 +117,21 @@ class UserDao(metaclass=Singleton):
 
         return self._to_user(res) if res else None
 
-    # partie POST
+    # POST
     @log
     def insert_user(self, user: User) -> User | None:
-        """Insert a new user (Customer or Administrator) into the database."""
+        """Insert a new user (Customer or Administrator).
+
+        Parameters
+        ----------
+        user : User
+            The user to insert, with an already hashed password.
+
+        Returns
+        -------
+        User or None
+            The user as saved in the database (with its id_user), or None.
+        """
         try:
             query = """
             INSERT INTO public.app_user
@@ -104,10 +160,23 @@ class UserDao(metaclass=Singleton):
 
         return self._to_user(res) if res else None
 
-    # partie UPDATE
+    # UPDATE
     @log
     def update_user(self, id_user: int, user: User) -> User | None:
-        """Update an existing user in the database."""
+        """Update an existing user.
+
+        Parameters
+        ----------
+        id_user : int
+            Identifier of the user to update.
+        user : User
+            The new values of the user.
+
+        Returns
+        -------
+        User or None
+            The user as saved in the database, or None if they do not exist.
+        """
         try:
             query = """
             UPDATE public.app_user
@@ -138,10 +207,21 @@ class UserDao(metaclass=Singleton):
 
         return self._to_user(res) if res else None
 
-    # partie DELETE
+    # DELETE
     @log
     def delete_user(self, id_user: int) -> bool:
-        """Delete a user by their id."""
+        """Delete a user by their identifier.
+
+        Parameters
+        ----------
+        id_user : int
+            Identifier of the user.
+
+        Returns
+        -------
+        bool
+            True if the user was deleted, False if they do not exist.
+        """
         try:
             query = "DELETE FROM public.app_user WHERE id_user = %(id_user)s RETURNING id_user;"
             res = DBConnector().sql_query(query, data={"id_user": id_user}, return_type="one")

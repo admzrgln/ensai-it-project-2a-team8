@@ -25,9 +25,20 @@ license = {text = "MIT"}
 
 [tool.ruff]
 line-length = 120
+# Onyxia runs Python 3.13: don't use syntax that only exists in Python 3.14
+target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "B", "I", "A", "C90", "PERF", "TCH", "TID"]
+
+[tool.ruff.lint.flake8-type-checking]
+# Pydantic reads the annotations of its models at runtime: their imports must stay real imports
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI also reads the annotations of the routes at runtime (dependencies such as AdminPayload,
+# bodies, responses): in the controllers, moving these imports into a TYPE_CHECKING block breaks the API
+"backend/src/Controller/*" = ["TC001", "TC002", "TC003"]
 
 [tool.pyrefly]
 project-includes = ["backend/src/**/*"]

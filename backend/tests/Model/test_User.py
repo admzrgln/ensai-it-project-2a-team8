@@ -11,18 +11,30 @@ from backend.src.Model.User import User
 BIRTH = date(2004, 3, 1)
 
 
+class FakeUser(User):
+    """User is abstract: this small subclass lets us test its common code."""
+
+    def __str__(self) -> str:
+        return super().__str__()
+
+
+def test_user_is_abstract():
+    with pytest.raises(TypeError):
+        User(1, "Louise", "F", "l@mail.fr", "hash", BIRTH, role="customer")
+
+
 def test_user_constructor():
-    u = User(1, "Louise", "F", "l@mail.fr", "hash", BIRTH, role="customer", salt="abc")
+    u = FakeUser(1, "Louise", "F", "l@mail.fr", "hash", BIRTH, role="customer", salt="abc")
     assert (u.id_user, u.first_name, u.last_name, u.email) == (1, "Louise", "F", "l@mail.fr")
     assert (u.password, u.date_of_birth, u.role, u.salt) == ("hash", BIRTH, "customer", "abc")
 
 
 def test_user_salt_defaults_to_none():
-    assert User(1, "A", "B", "a@b.fr", "pw", None, role="customer").salt is None
+    assert FakeUser(1, "A", "B", "a@b.fr", "pw", None, role="customer").salt is None
 
 
 def test_user_str_contains_main_information():
-    text = str(User(1, "Louise", "F", "l@mail.fr", "pw", BIRTH, role="customer"))
+    text = str(FakeUser(1, "Louise", "F", "l@mail.fr", "pw", BIRTH, role="customer"))
     for part in ("1", "Louise", "F", "2004-03-01", "customer", "l@mail.fr"):
         assert part in text
 

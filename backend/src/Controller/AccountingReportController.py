@@ -1,10 +1,10 @@
 import logging
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.src.Controller.JWTBearer import require_admin
+from backend.src.Controller.JWTBearer import AdminPayload
 from backend.src.Service.AccountingReportService import AccountingReportService
 
 accounting_router = APIRouter(prefix="/accounting-reports")
@@ -12,7 +12,7 @@ accounting_service = AccountingReportService()
 
 
 class MovieRevenueModel(BaseModel):
-    """Pydantic model for one revenue line of the report"""
+    """Revenue and tickets sold for one movie, as returned by the API."""
 
     id_movie: int
     title: str
@@ -21,7 +21,7 @@ class MovieRevenueModel(BaseModel):
 
 
 class MovieOccupancyModel(BaseModel):
-    """Pydantic model for one occupancy line of the report"""
+    """Occupancy of the screenings of one movie, as returned by the API."""
 
     id_movie: int
     title: str
@@ -32,7 +32,7 @@ class MovieOccupancyModel(BaseModel):
 
 
 class AccountingReportModel(BaseModel):
-    """Pydantic model returned by the API"""
+    """Accounting report of a period, as returned by the API."""
 
     period_start: date
     period_end: date
@@ -45,8 +45,24 @@ class AccountingReportModel(BaseModel):
 
 
 @accounting_router.get("/", tags=["Accounting"], response_model=AccountingReportModel)
-async def get_accounting_report(period_start: date, period_end: date, admin: dict = Depends(require_admin)):
-    """Accounting report for a period (dates YYYY-MM-DD, both inclusive). Admin only."""
+async def get_accounting_report(period_start: date, period_end: date, admin: AdminPayload) -> AccountingReportModel:
+    """Accounting report of a period (administrators only).
+
+    Parameters
+    ----------
+    period_start : date
+        First day of the period (YYYY-MM-DD, inclusive).
+    period_end : date
+        Last day of the period (YYYY-MM-DD, inclusive).
+    admin : dict
+        Token of the logged-in administrator.
+
+    Returns
+    -------
+    AccountingReportModel
+        Totals, revenue per movie and occupancy per movie
+        (errors 400 invalid period, 403 not an administrator, 404 unknown user).
+    """
     logging.info(f"Accounting report {period_start} -> {period_end} by admin {admin['user_id']}")
     try:
         report = accounting_service.generate_report(period_start, period_end, admin["user_id"])

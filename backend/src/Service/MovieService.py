@@ -1,11 +1,24 @@
-from backend.src.DAO.MovieDAO import MovieDao  # noqa: N999
+from typing import Any
+
+from backend.src.DAO.MovieDAO import MovieDao
 from backend.src.Model.Movie import Movie
 from backend.src.Service.OmdbClient import OmdbClient
 from utils.log_utils import log
 
 
 def _parse_runtime(runtime: str) -> int:
-    """'136 min' -> 136 ; 'N/A' -> 0"""
+    """Convert the runtime given by OMDb into minutes ("136 min" -> 136, "N/A" -> 0).
+
+    Parameters
+    ----------
+    runtime : str
+        Runtime as written by OMDb.
+
+    Returns
+    -------
+    int
+        Number of minutes, or 0 if unknown.
+    """
     try:
         return int(runtime.split()[0])
     except (ValueError, IndexError, AttributeError):
@@ -13,42 +26,103 @@ def _parse_runtime(runtime: str) -> int:
 
 
 def _first_genre(genres: str) -> str | None:
-    """'Action, Sci-Fi' -> 'Action' ; 'N/A' ou vide -> None"""
+    """Keep the first genre given by OMDb ("Action, Sci-Fi" -> "Action").
+
+    Parameters
+    ----------
+    genres : str
+        Genres as written by OMDb, separated by commas.
+
+    Returns
+    -------
+    str or None
+        The first genre, or None if OMDb does not know it ("N/A" or empty).
+    """
     first = genres.split(",")[0].strip() if genres else ""
     return None if first in ("", "N/A") else first
 
 
 class MovieService:
-    """Class containing Movie service methods (Business Logic Layer)"""
+    """Business rules on the movies, and import from OMDb."""
 
-    def __init__(self):
-        self.movie_dao = MovieDao()
+    def __init__(self) -> None:
+        self.movie_dao: MovieDao = MovieDao()
         self.omdb_client = OmdbClient()
 
     @log
     def find_all(self) -> list[Movie]:
-        """List all movies available in the database"""
+        """List all the movies.
+
+        Returns
+        -------
+        list of Movie
+            All the movies, ordered by title.
+        """
         return self.movie_dao.find_all()
 
     @log
-    def find_by_id(self, id_movie: int) -> Movie:
-        """Find a specific movie by its id"""
+    def find_by_id(self, id_movie: int) -> Movie | None:
+        """Find a movie by its identifier.
+
+        Parameters
+        ----------
+        id_movie : int
+            Identifier of the movie.
+
+        Returns
+        -------
+        Movie or None
+            The movie, or None if it does not exist.
+        """
         return self.movie_dao.find_by_id(id_movie)
 
     @log
-    def find_by_title(self, title: str) -> Movie:
-        """Find a movie by its title (partial match supported)"""
+    def find_by_title(self, title: str) -> Movie | None:
+        """Find a movie by a part of its title (case-insensitive).
+
+        Parameters
+        ----------
+        title : str
+            Part of the title.
+
+        Returns
+        -------
+        Movie or None
+            The first movie found, or None.
+        """
         search_term = f"%{title}%"
         return self.movie_dao.find_by_title(search_term)
 
     @log
     def create_movie(self, movie: Movie) -> bool:
-        """Validate and create a new movie"""
+        """Create a new movie.
+
+        Parameters
+        ----------
+        movie : Movie
+            The movie to create.
+
+        Returns
+        -------
+        bool
+            True if the movie was created, False otherwise.
+        """
         return self.movie_dao.insert_movie(movie)
 
     @log
     def update_movie(self, movie: Movie) -> bool:
-        """Validate and update an existing movie"""
+        """Update an existing movie.
+
+        Parameters
+        ----------
+        movie : Movie
+            The movie with its new values (id_movie required).
+
+        Returns
+        -------
+        bool
+            True if the movie was updated, False otherwise.
+        """
         if movie.id_movie is None:
             return False
 
@@ -56,16 +130,57 @@ class MovieService:
 
     @log
     def delete_movie(self, id_movie: int) -> bool:
-        """Validate and delete a movie by its id"""
+        """Delete a movie by its identifier.
+
+        Parameters
+        ----------
+        id_movie : int
+            Identifier of the movie.
+
+        Returns
+        -------
+        bool
+            True if the movie was deleted, False otherwise.
+        """
         return self.movie_dao.movie_delete(id_movie)
 
     @log
-    def search_omdb(self, title: str) -> list[dict]:
+    def search_omdb(self, title: str) -> list[dict[str, Any]]:
+        """Search movies on OMDb by keyword.
+
+        Parameters
+        ----------
+        title : str
+            Words of the title.
+
+        Returns
+        -------
+        list of dict
+            Light description of each movie found (title, year, imdbID, poster).
+        """
         return self.omdb_client.search(title)
 
     @log
     def import_from_omdb(self, imdb_id: str) -> Movie:
-        """Importe un film depuis OMDb (ou renvoie celui déjà en base)."""
+        """Import a movie from OMDb (or return it if it is already in the database).
+
+        Parameters
+        ----------
+        imdb_id : str
+            IMDb identifier of the movie, e.g. "tt1375666".
+
+        Returns
+        -------
+        Movie
+            The movie saved in the database.
+
+        Raises
+        ------
+        LookupError
+            If OMDb does not know the movie.
+        RuntimeError
+            If the database refuses the movie (e.g. unknown genre or duration).
+        """
         existing = self.movie_dao.find_by_external_id(imdb_id)
         if existing:
             return existing

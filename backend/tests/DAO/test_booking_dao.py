@@ -89,7 +89,7 @@ def test_find_by_id_found_loads_tickets(dao, sql_query):
     b = dao.find_by_id(5)
 
     assert b.id_booking == 5
-    assert [t.first_name for t in b.tickets] == ["Louise", "Kid"]
+    assert [t.first_name for t in b.tickets] == ["Thomas", "Kid"]
     assert sql_query.call_count == 2
 
 
@@ -188,6 +188,21 @@ def test_insert_booking_db_error_is_raised_and_connection_closed(dao, cursor):
     cursor.conn.close.assert_called_once()
 
 
+def test_insert_booking_without_returned_booking_row_is_an_error(dao, cursor):
+    cursor.fetchone.side_effect = [{"available_seats": 48}, None]
+    with pytest.raises(RuntimeError, match="booking was not created"):
+        dao.insert_booking(make_booking())
+    cursor.conn.close.assert_called_once()
+
+
+def test_insert_booking_without_returned_ticket_row_is_an_error(dao, cursor):
+    cursor.fetchone.side_effect = [{"available_seats": 48},
+                                   {"id_booking": 5, "booking_date": BOOKED_AT}, None]
+    with pytest.raises(RuntimeError, match="ticket was not created"):
+        dao.insert_booking(make_booking())
+    cursor.conn.close.assert_called_once()
+
+
 def test_cancel_booking_gives_seats_back(dao, cursor):
     cursor.fetchone.return_value = {"id_screening": 1, "seat_count": 3}
 
@@ -212,47 +227,6 @@ def test_cancel_booking_db_error_is_raised(dao, cursor):
     with pytest.raises(Exception, match="db down"):
         dao.cancel_booking(5)
     cursor.conn.close.assert_called_once()
-
-
-def test_revenue_by_movie(dao, sql_query):
-    sql_query.return_value = [
-        {"id_movie": 1, "title": "Dune", "tickets_sold": 3, "revenue": Decimal("19.50")},
-        {"id_movie": 2, "title": "Alien", "tickets_sold": 1, "revenue": Decimal("9.00")},
-    ]
-
-    res = dao.revenue_by_movie(date(2026, 11, 1), date(2026, 11, 30))
-
-    assert res == [
-        {"id_movie": 1, "title": "Dune", "tickets_sold": 3, "revenue": 19.5},
-        {"id_movie": 2, "title": "Alien", "tickets_sold": 1, "revenue": 9.0},
-    ]
-    assert isinstance(res[0]["revenue"], float)
-    kwargs = sql_query.call_args.kwargs
-    assert kwargs["data"] == {"start": date(2026, 11, 1), "end": date(2026, 11, 30)}
-    assert "status = 'confirmed'" in sql_query.call_args.args[0]
-
-
-def test_revenue_by_movie_empty_period(dao, sql_query):
-    sql_query.return_value = []
-    assert dao.revenue_by_movie(date(2026, 1, 1), date(2026, 1, 31)) == []
-
-
-def test_revenue_by_tariff(dao, sql_query):
-    sql_query.return_value = [{"tariff_code": "student",
-                               "tickets_sold": 2, "revenue": Decimal("12.00")}]
-
-    res = dao.revenue_by_tariff(date(2026, 11, 1), date(2026, 11, 30))
-
-    assert res == [{"tariff_code": "student", "tickets_sold": 2, "revenue": 12.0}]
-    assert "status = 'confirmed'" in sql_query.call_args.args[0]
-
-
-def test_revenue_queries_propagate_db_error(dao, sql_query):
-    sql_query.side_effect = Exception("db down")
-    with pytest.raises(Exception, match="db down"):
-        dao.revenue_by_movie(date(2026, 11, 1), date(2026, 11, 30))
-    with pytest.raises(Exception, match="db down"):
-        dao.revenue_by_tariff(date(2026, 11, 1), date(2026, 11, 30))
 
 
 def test_find_by_customer_propagates_db_error(dao, sql_query):

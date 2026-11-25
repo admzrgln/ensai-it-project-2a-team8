@@ -1,4 +1,7 @@
-from datetime import date, timedelta
+from __future__ import annotations
+
+from datetime import timedelta
+from typing import TYPE_CHECKING, Any
 
 from backend.src.DAO.DBConnector import DBConnector
 from backend.src.Model.MovieOccupancy import MovieOccupancy
@@ -6,25 +9,50 @@ from backend.src.Model.MovieRevenue import MovieRevenue
 from utils.log_utils import get_logger, log
 from utils.singleton import Singleton
 
+if TYPE_CHECKING:
+    from datetime import date
+
 logger = get_logger(__name__)
 
 
 class AccountingReportDao(metaclass=Singleton):
-    """Class containing the SQL queries used to build accounting reports."""
+    """SQL queries used to build the accounting reports."""
 
     @staticmethod
-    def _to_movie_revenue(row: dict) -> MovieRevenue:
-        """Convertit une ligne SQL en objet MovieRevenue."""
+    def _to_movie_revenue(row: dict[str, Any]) -> MovieRevenue:
+        """Convert a row of the revenue query into a MovieRevenue.
+
+        Parameters
+        ----------
+        row : dict
+            Row returned by the database.
+
+        Returns
+        -------
+        MovieRevenue
+            The revenue of the movie (Decimal converted to float).
+        """
         return MovieRevenue(
             id_movie=row["id_movie"],
             title=row["title"],
-            revenue=float(row["revenue"]),  # NUMERIC revient en Decimal
+            revenue=float(row["revenue"]),  # NUMERIC is read as Decimal
             tickets_sold=int(row["tickets_sold"]),
         )
 
     @staticmethod
-    def _to_movie_occupancy(row: dict) -> MovieOccupancy:
-        """Convertit une ligne SQL en objet MovieOccupancy."""
+    def _to_movie_occupancy(row: dict[str, Any]) -> MovieOccupancy:
+        """Convert a row of the occupancy query into a MovieOccupancy.
+
+        Parameters
+        ----------
+        row : dict
+            Row returned by the database.
+
+        Returns
+        -------
+        MovieOccupancy
+            The occupancy of the movie.
+        """
         return MovieOccupancy(
             id_movie=row["id_movie"],
             title=row["title"],
@@ -35,15 +63,27 @@ class AccountingReportDao(metaclass=Singleton):
 
     @log
     def find_movie_revenues(self, period_start: date, period_end: date) -> list[MovieRevenue]:
-        """Revenue and tickets sold per movie, for tickets SOLD in [period_start, period_end].
+        """Revenue and tickets sold per movie, for the tickets SOLD in [period_start, period_end].
 
         Rules:
         - one row of `ticket` = one seat sold; ticket.price is the price actually paid
-          (it does not change if an admin modifies the price grid afterwards)
+          (it does not change if an administrator modifies the price grid afterwards)
         - only 'confirmed' bookings count (cancelled bookings are ignored)
         - a sale is counted on the BOOKING date: that is when the cinema gets the money
           (occupancy, on the contrary, is counted on the screening date: see find_movie_occupancy)
         - period_end is inclusive: "< period_end + 1 day" because booking_date is a TIMESTAMP
+
+        Parameters
+        ----------
+        period_start : date
+            First day of the period (inclusive).
+        period_end : date
+            Last day of the period (inclusive).
+
+        Returns
+        -------
+        list of MovieRevenue
+            One line per movie with at least one ticket sold, from the highest revenue.
         """
         query = """
             SELECT m.id_movie,
@@ -81,6 +121,18 @@ class AccountingReportDao(metaclass=Singleton):
         - seats offered = room capacity; seats sold = capacity - available_seats
           (available_seats is decreased by a booking and given back by a cancellation)
         - period_end is inclusive ("< period_end + 1 day", date_time is a TIMESTAMP)
+
+        Parameters
+        ----------
+        period_start : date
+            First day of the period (inclusive).
+        period_end : date
+            Last day of the period (inclusive).
+
+        Returns
+        -------
+        list of MovieOccupancy
+            One line per movie with at least one screening already started, by title.
         """
         query = """
             SELECT m.id_movie,

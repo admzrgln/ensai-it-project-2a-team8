@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any, cast
+
 from backend.src.DAO.DBConnector import DBConnector
 from backend.src.Model.PriceRevision import PriceRevision
 from utils.log_utils import get_logger, log
@@ -7,19 +11,38 @@ logger = get_logger(__name__)
 
 
 class PriceRevisionDao(metaclass=Singleton):
-    """Class containing methods to access the yearly price revisions in the database."""
+    """Access to the yearly price revisions in the database."""
 
     @staticmethod
-    def _to_revision(row: dict) -> PriceRevision:
+    def _to_revision(row: dict[str, Any]) -> PriceRevision:
+        """Convert a row of the price_revision table into a PriceRevision.
+
+        Parameters
+        ----------
+        row : dict
+            Row returned by the database.
+
+        Returns
+        -------
+        PriceRevision
+            The corresponding revision (rate converted from Decimal to float).
+        """
         return PriceRevision(
             year=row["year"],
-            rate_percent=float(row["rate_percent"]),  # NUMERIC revient en Decimal
+            rate_percent=float(row["rate_percent"]),  # NUMERIC is read as Decimal
             applied_at=row["applied_at"],
         )
 
     # GET
     @log
     def find_all(self) -> list[PriceRevision]:
+        """List the planned and applied revisions, by year.
+
+        Returns
+        -------
+        list of PriceRevision
+            The revisions (empty list if there is none).
+        """
         query = "SELECT * FROM public.price_revision ORDER BY year;"
         try:
             res = DBConnector().sql_query(query, return_type="all")
@@ -28,10 +51,21 @@ class PriceRevisionDao(metaclass=Singleton):
             raise
         return [self._to_revision(r) for r in (res or [])]
 
-    # POST / UPDATE : on crée ou on remplace une révision, tant qu'elle n'est pas appliquée
+    # POST / UPDATE: create or replace a revision, as long as it is not applied
     @log
     def upsert_planned(self, revision: PriceRevision) -> bool:
-        """Plan (or change the rate of) a revision. Returns False if it was already applied."""
+        """Plan a revision, or change its rate if it is not applied yet.
+
+        Parameters
+        ----------
+        revision : PriceRevision
+            The revision (year and rate) to plan.
+
+        Returns
+        -------
+        bool
+            True if the revision was saved, False if this year's revision was already applied.
+        """
         query = """
             INSERT INTO public.price_revision (year, rate_percent)
             VALUES (%(year)s, %(rate)s)
@@ -51,7 +85,18 @@ class PriceRevisionDao(metaclass=Singleton):
     # DELETE
     @log
     def delete_planned(self, year: int) -> bool:
-        """Cancel a revision that has not been applied yet."""
+        """Cancel a revision that has not been applied yet.
+
+        Parameters
+        ----------
+        year : int
+            Year of the revision.
+
+        Returns
+        -------
+        bool
+            True if the revision was cancelled, False if it does not exist or was already applied.
+        """
         query = """
             DELETE FROM public.price_revision
             WHERE year = %(year)s AND applied_at IS NULL
@@ -64,19 +109,29 @@ class PriceRevisionDao(metaclass=Singleton):
             raise
         return res is not None
 
-    # APPLICATION
+    # APPLY
     @log
     def apply_due(self, up_to_year: int) -> list[int]:
         """Apply, in ONE transaction, every planned revision whose year is <= up_to_year.
 
         Prices are multiplied by (1 + rate / 100) and rounded to 0.10 EUR. The rows are locked
         (FOR UPDATE) and re-checked on applied_at, so two app instances starting at the same time
-        can't apply the same revision twice. Returns the list of applied years (in order).
+        can't apply the same revision twice.
+
+        Parameters
+        ----------
+        up_to_year : int
+            Last year whose revision must be applied (usually the current year).
+
+        Returns
+        -------
+        list of int
+            The years of the revisions applied, in order (empty if there was none).
         """
         conn = DBConnector().get_connection()
         applied: list[int] = []
         try:
-            with conn:  # COMMIT à la fin, ROLLBACK si une exception est levée
+            with conn:  # COMMIT at the end, ROLLBACK if an exception is raised
                 with conn.cursor() as cur:
                     cur.execute(
                         """
@@ -87,7 +142,8 @@ class PriceRevisionDao(metaclass=Singleton):
                         """,
                         {"year": up_to_year},
                     )
-                    for row in cur.fetchall():
+                    # RealDictCursor: each row is a dict (the psycopg2 stubs say tuple)
+                    for row in cast("list[dict[str, Any]]", cur.fetchall()):
                         cur.execute(
                             "UPDATE public.tariff SET price = ROUND(price * (1 + %(rate)s / 100.0) * 10) / 10;",
                             {"rate": row["rate_percent"]},
@@ -99,7 +155,7 @@ class PriceRevisionDao(metaclass=Singleton):
                         applied.append(row["year"])
             return applied
         except Exception as e:
-            logger.error(f"Erreur lors de l'application des révisions de prix : {e}")
+            logger.error(f"Error while applying the price revisions: {e}")
             raise
         finally:
             conn.close()

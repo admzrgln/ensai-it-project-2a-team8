@@ -1,50 +1,98 @@
-from backend.src.DAO.UserDAO import UserDao  # noqa: N999
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from backend.src.DAO.UserDAO import UserDao
 from backend.src.Model.Customer import Customer
-from backend.src.Model.User import User
 from backend.src.Service.PasswordService import check_password_strength, create_salt, hash_password
 from utils.log_utils import log
 
+if TYPE_CHECKING:
+    from backend.src.Model.User import User
+
 
 class UserService:
-    """Class containing User service methods (Business Logic Layer)"""
+    """Business rules on the users: accounts, passwords and authentication."""
 
-    def __init__(self):
-        self.user_dao = UserDao()
+    def __init__(self) -> None:
+        self.user_dao: UserDao = UserDao()
 
     @log
     def find_all(self) -> list[User]:
-        """List all users available in the database"""
+        """List all the users.
+
+        Returns
+        -------
+        list of User
+            All the users, ordered by last name.
+        """
         return self.user_dao.find_all_user()
 
     @log
     def find_by_id(self, id_user: int) -> User | None:
-        """Find a specific user by its id"""
+        """Find a user by their identifier.
+
+        Parameters
+        ----------
+        id_user : int
+            Identifier of the user.
+
+        Returns
+        -------
+        User or None
+            The user, or None if they do not exist.
+        """
         return self.user_dao.find_by_id(id_user)
 
     @log
     def find_by_email(self, email: str) -> User | None:
-        """Find a user by their email address"""
+        """Find a user by their email address.
+
+        Parameters
+        ----------
+        email : str
+            Email address.
+
+        Returns
+        -------
+        User or None
+            The user, or None if no account uses this address.
+        """
         return self.user_dao.find_user_by_email(email)
 
     @log
     def create_user(self, user: User) -> User | None:
-        """Validate and create a new user"""
-        # 1. Vérifier que l'email n'est pas déjà utilisé (contrainte UNIQUE)
+        """Check and create a new user, with a salted and hashed password.
+
+        A customer with an @ensai.fr address becomes an ENSAI student.
+
+        Parameters
+        ----------
+        user : User
+            The user to create, with their password in clear text.
+
+        Returns
+        -------
+        User or None
+            The user created, or None if the email is already used,
+            the password is too weak or the insertion failed.
+        """
+        # 1. The email must not be used yet (UNIQUE constraint)
         existing_user = self.user_dao.find_user_by_email(user.email)
         if existing_user is not None:
             return None
 
-        # 2. Règle du rapport d'analyse : statut étudiant avec une adresse ensai.fr
+        # 2. Rule of the analysis report: an ensai.fr address gives the ENSAI student status
         if isinstance(user, Customer) and user.email.lower().endswith("@ensai.fr"):
             user.is_ensai_student = True
 
-        # 3. Vérifier la solidité du mot de passe
+        # 3. The password must be strong enough
         try:
             check_password_strength(user.password)
         except Exception:
             return None
 
-        # 4. Générer un sel et hacher le mot de passe avant l'insertion
+        # 4. Create a salt and hash the password before the insertion
         user.salt = create_salt()
         user.password = hash_password(user.password, user.salt)
 
@@ -52,15 +100,28 @@ class UserService:
 
     @log
     def update_user(self, id_user: int, user: User, change_password: bool = True) -> User | None:
-        """Validate and update an existing user.
+        """Check and update an existing user.
 
-        change_password=False : user.password est déjà le hash en base (et user.salt son sel),
-        on ne le re-hache pas.
+        Parameters
+        ----------
+        id_user : int
+            Identifier of the user to update.
+        user : User
+            The new values of the user.
+        change_password : bool, optional
+            If False, user.password is already the hash saved in the database (and user.salt
+            its salt): it is not hashed again.
+
+        Returns
+        -------
+        User or None
+            The user updated, or None if the email belongs to another account,
+            the new password is too weak or the user does not exist.
         """
         if id_user is None:
             return None
 
-        # L'email ne doit pas appartenir à un AUTRE compte (sinon erreur 500 sur la contrainte UNIQUE)
+        # The email must not belong to ANOTHER account (otherwise error 500 on the UNIQUE constraint)
         other = self.user_dao.find_user_by_email(user.email)
         if other is not None and other.id_user != id_user:
             return None
@@ -80,12 +141,36 @@ class UserService:
 
     @log
     def delete_user(self, id_user: int) -> bool:
-        """Validate and delete a user by its id"""
+        """Delete a user by their identifier.
+
+        Parameters
+        ----------
+        id_user : int
+            Identifier of the user.
+
+        Returns
+        -------
+        bool
+            True if the user was deleted, False otherwise.
+        """
         return self.user_dao.delete_user(id_user)
 
     @log
     def authenticate(self, email: str, password: str) -> User | None:
-        """Authenticate a user with their email and password"""
+        """Check the email and password of a user.
+
+        Parameters
+        ----------
+        email : str
+            Email address.
+        password : str
+            Password in clear text.
+
+        Returns
+        -------
+        User or None
+            The user if the credentials are correct, None otherwise.
+        """
         user = self.user_dao.find_user_by_email(email)
         if user and user.salt and user.password == hash_password(password, user.salt):
             return user
